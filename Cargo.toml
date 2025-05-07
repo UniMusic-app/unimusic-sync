@@ -1,0 +1,12 @@
+[workspace.package]
+name = "unimusic-sync"
+version = "0.0.1"
+edition = "2024"
+
+[workspace]
+members = ["src/sync", "src/cli"]
+resolver = "2"
+
+[workspace.dependencies]
+cfg-if = "1.0.0"
+tokio = "1.45.0"

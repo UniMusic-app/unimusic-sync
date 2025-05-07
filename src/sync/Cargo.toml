@@ -1,0 +1,36 @@
+[package]
+name = "sync"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+
+[dependencies]
+cfg-if = { workspace = true }
+tokio = { workspace = true }
+
+iroh = { version = "=0.34.1", features = ["discovery-local-network"] }
+iroh-blobs = { version = "=0.34.1" }
+iroh-docs = { version = "=0.34.0", features = ["rpc"] }
+iroh-gossip = { version = "=0.34.1" }
+
+# [target.wasm32-unknown-unknown.dependencies]
+# cfg-if = { workspace = true }
+# tokio = { workspace = true }
+
+# getrandom = { version = "=0.3.2", features = ["wasm_js"] }
+
+# iroh = { version = "=0.34.1", default-features = false }
+# iroh-blobs = { version = "=0.34.1", default-features = false }
+# iroh-docs = { version = "=0.34.0", default-features = false }
+# iroh-gossip = { version = "=0.34.1", default-features = false }
+
+# wasm-bindgen = "=0.2.100"
+# wasm-bindgen-futures = "=0.4.50"
+# wasm-streams = "=0.4.2"
