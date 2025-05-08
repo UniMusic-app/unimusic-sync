@@ -14,11 +14,14 @@ panic = "abort"
 [dependencies]
 cfg-if = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 
 iroh = { version = "=0.34.1", features = ["discovery-local-network"] }
 iroh-blobs = { version = "=0.34.1" }
 iroh-docs = { version = "=0.34.0", features = ["rpc"] }
 iroh-gossip = { version = "=0.34.1" }
+
+thiserror = "2.0.12"
 
 # [target.wasm32-unknown-unknown.dependencies]
 # cfg-if = { workspace = true }

@@ -537,6 +537,7 @@ dependencies = [
  "cfg-if",
  "sync",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
@@ -4480,7 +4481,9 @@ dependencies = [
  "iroh-blobs",
  "iroh-docs",
  "iroh-gossip",
+ "thiserror 2.0.12",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]

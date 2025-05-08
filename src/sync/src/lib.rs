@@ -1,105 +1,175 @@
-use std::error::Error;
-
-use iroh_blobs::store::ExportMode;
-use iroh_docs::{
-    Author,
-    rpc::{AddrInfoOptions, client::docs::ShareMode},
-    store::Query,
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
+use thiserror::Error;
 
-cfg_if::cfg_if! {
-    if #[cfg(not(target_arch = "wasm32"))] {
-        use iroh::{protocol::Router, Endpoint};
-        use iroh_blobs::{net_protocol::Blobs, ALPN as BLOBS_ALPN};
-        use iroh_docs::{protocol::Docs, ALPN as DOCS_ALPN};
-        use iroh_gossip::{net::Gossip, ALPN as GOSSIP_ALPN};
-    } else {
-        use wasm_bindgen::prelude::*;
-    }
+use iroh::{protocol::Router, Endpoint};
+use iroh_blobs::{net_protocol::Blobs, Hash, ALPN as BLOBS_ALPN};
+use iroh_docs::{
+    engine::LiveEvent,
+    protocol::Docs,
+    rpc::{client::docs::ShareMode, AddrInfoOptions},
+    store::Query,
+    AuthorId, DocTicket, NamespaceId, ALPN as DOCS_ALPN,
+};
+use iroh_gossip::{net::Gossip, ALPN as GOSSIP_ALPN};
+
+use tokio_stream::StreamExt;
+
+#[derive(Debug, Error)]
+pub enum IrohManagerError {
+    #[error(transparent)]
+    Iroh(#[from] Box<dyn Error>),
+    #[error("Tried to open replica, which does not exist: {0}")]
+    ReplicaMissing(NamespaceId),
+    #[error("Tried to access entry, which does not exist:\n namespace: {0}\n path: {1}")]
+    EntryMissing(NamespaceId, String),
 }
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-type BlobsStore = iroh_blobs::store::mem::Store;
+type PersistentStore = iroh_blobs::store::fs::Store;
+// type MemoryStore = iroh_blobs::store::mem::Store;
+
 pub struct IrohManager {
+    pub endpoint: Endpoint,
     pub router: Router,
 
-    pub blobs: Blobs<BlobsStore>,
+    pub blobs: Blobs<PersistentStore>,
     pub gossip: Gossip,
-    pub docs: Docs<BlobsStore>,
+    pub docs: Docs<PersistentStore>,
 }
 
-pub async fn manager() -> Result<IrohManager> {
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            let endpoint = Endpoint::builder()
-                .discovery_n0()
-                .discovery_local_network()
-                .bind()
-                .await?;
+impl IrohManager {
+    pub async fn new<P: AsRef<Path> + Into<PathBuf>>(path: P) -> Result<IrohManager> {
+        let endpoint = Endpoint::builder()
+            .discovery_n0()
+            .discovery_local_network()
+            .bind()
+            .await?;
 
-            let builder = Router::builder(endpoint.clone());
+        let builder = Router::builder(endpoint.clone());
 
-            let blobs = Blobs::memory().build(&endpoint);
-            let gossip = Gossip::builder().spawn(endpoint.clone()).await?;
-            let docs = Docs::memory().spawn(&blobs, &gossip).await?;
+        let blobs = Blobs::persistent(&path).await?.build(&endpoint);
+        let gossip = Gossip::builder().spawn(endpoint.clone()).await?;
+        let docs = Docs::persistent(path.into()).spawn(&blobs, &gossip).await?;
 
-            let router = builder
-                .accept(BLOBS_ALPN, blobs.clone())
-                .accept(GOSSIP_ALPN, gossip.clone())
-                .accept(DOCS_ALPN, docs.clone())
-                .spawn()
-                .await?;
+        let router = builder
+            .accept(BLOBS_ALPN, blobs.clone())
+            .accept(GOSSIP_ALPN, gossip.clone())
+            .accept(DOCS_ALPN, docs.clone())
+            .spawn()
+            .await?;
 
-            Ok(IrohManager {
-                router,
+        Ok(IrohManager {
+            endpoint,
+            router,
 
-                blobs,
-                gossip,
-                docs
-            })
-        } else {
-            todo!()
-        }
+            blobs,
+            gossip,
+            docs,
+        })
     }
-}
 
-pub async fn start() -> Result<()> {
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            let iroh_manager = manager().await?;
+    pub async fn close(self) -> Result<()> {
+        self.router.shutdown().await?;
+        self.endpoint.close().await;
+        Ok(())
+    }
 
-            let docs_client =  iroh_manager.docs.client();
-            let blobs_client = iroh_manager.blobs.client();
+    pub async fn get_author(&self) -> Result<AuthorId> {
+        let docs_client = self.docs.client();
+        let authors = docs_client.authors();
+        let author = authors.default().await?;
+        Ok(author)
+    }
 
-            let authors = docs_client.authors();
-            let author = authors.create().await?;
+    pub async fn get_or_create_namespace(&mut self) -> Result<NamespaceId> {
+        let docs_client = self.docs.client();
 
-            let doc = docs_client.create().await?;
-            let doc_namespace = doc.id();
-            let doc_ticket = doc.share(ShareMode::Read, AddrInfoOptions::Id).await?;
+        if let Some(doc) = docs_client.list().await?.next().await {
+            return Ok(doc?.0);
+        }
 
-            doc.set_bytes(author, "dog.txt", "woof").await?;
-            doc.set_bytes(author, "cat.txt", "meow").await?;
+        let doc = docs_client.create().await?;
+        Ok(doc.id())
+    }
 
-            for path in ["dog.txt", "cat.txt"] {
-                let dog_entry = doc.get_one(Query::key_exact(path)).await?;
-                if let Some(entry) = dog_entry {
-                    let content_bytes = blobs_client.read_to_bytes(entry.content_hash()).await?;
-                    let content = String::from_utf8_lossy(&content_bytes);
+    pub async fn write_file(
+        &mut self,
+        namespace: NamespaceId,
+        path: String,
+        data: Vec<u8>,
+    ) -> Result<Hash> {
+        let docs_client = self.docs.client();
 
-                    println!("{path}: {content}");
-                } else {
-                    println!("no {path}");
-                }
+        let authors = docs_client.authors();
+        let author = authors.default().await?;
+
+        let replica = docs_client
+            .open(namespace)
+            .await?
+            .ok_or(IrohManagerError::ReplicaMissing(namespace))?;
+
+        let hash = replica.set_bytes(author, path, data).await?;
+
+        Ok(hash)
+    }
+
+    pub async fn read_file(&self, namespace: NamespaceId, path: &str) -> Result<Vec<u8>> {
+        let docs_client = self.docs.client();
+
+        let replica = docs_client
+            .open(namespace)
+            .await?
+            .ok_or(IrohManagerError::ReplicaMissing(namespace))?;
+
+        let entry = replica
+            .get_one(Query::key_exact(&path))
+            .await?
+            .ok_or_else(|| IrohManagerError::EntryMissing(namespace, path.to_string()))?;
+
+        self.read_file_hash(entry.content_hash()).await
+    }
+
+    pub async fn read_file_hash(&self, hash: Hash) -> Result<Vec<u8>> {
+        let blobs_client = self.blobs.client();
+        let bytes = blobs_client.read_to_bytes(hash).await?;
+        Ok(bytes.to_vec())
+    }
+
+    pub async fn share(&self, namespace: NamespaceId) -> Result<DocTicket> {
+        let docs_client = self.docs.client();
+        let replica = docs_client
+            .open(namespace)
+            .await?
+            .ok_or(IrohManagerError::ReplicaMissing(namespace))?;
+
+        let ticket = replica
+            .share(ShareMode::Write, AddrInfoOptions::RelayAndAddresses)
+            .await?;
+
+        Ok(ticket)
+    }
+
+    pub async fn import(&self, ticket: &str) -> Result<NamespaceId> {
+        let ticket = DocTicket::from_str(ticket)?;
+        let docs_client = self.docs.client();
+
+        println!("Trying to import ticket: {ticket:?}");
+
+        let (replica, mut event_stream) = docs_client.import_and_subscribe(ticket).await?;
+        while let Some(event) = event_stream.next().await {
+            match event? {
+                LiveEvent::PendingContentReady => break,
+                event => println!("EVENT: {event:?}"),
             }
-
-            println!("Namespace: {doc_namespace}");
-            println!("Ticket: {doc_ticket}");
-        } else {
-            todo!()
         }
-    }
 
-    Ok(())
+        println!("Imported ticket");
+
+        Ok(replica.id())
+    }
 }

@@ -6,4 +6,6 @@ edition = "2024"
 [dependencies]
 cfg-if = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
+
 sync = { path = "../sync" }
