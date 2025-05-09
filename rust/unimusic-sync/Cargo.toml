@@ -1,0 +1,30 @@
+[package]
+name = "unimusic-sync"
+version = "0.0.1"
+edition.workspace = true
+
+[lib]
+name = "unimusic_sync"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+
+[dependencies]
+cfg-if = "1.0.0"
+
+tokio = "1.45.0"
+tokio-stream = "0.1.17"
+
+iroh = { version = "=0.34.1", features = ["discovery-local-network"] }
+iroh-blobs = { version = "=0.34.1" }
+iroh-docs = { version = "=0.34.0", features = ["rpc"] }
+iroh-gossip = { version = "=0.34.1" }
+
+thiserror = "2.0.12"
+
+uniffi = { workspace = true, features = ["tokio"] }
+
+[build-dependencies]
+uniffi = { workspace = true, features = ["build"] }

@@ -1,0 +1,7 @@
+[workspace]
+members = ["unimusic-sync", "uniffi-bindgen", "uniffi-bindgen-swift"]
+resolver = "2"
+package.edition = "2024"
+
+[workspace.dependencies]
+uniffi = "0.29.2"
