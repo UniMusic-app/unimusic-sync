@@ -604,7 +604,7 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func getOrCreateNamespace() async throws  -> UNamespaceId
     
-    func `import`(ticket: String) async throws  -> UNamespaceId
+    func `import`(ticket: UDocTicket) async throws  -> UNamespaceId
     
     func readFile(namespace: UNamespaceId, path: String) async throws  -> Data
     
@@ -703,13 +703,13 @@ open func getOrCreateNamespace()async throws  -> UNamespaceId  {
         )
 }
     
-open func `import`(ticket: String)async throws  -> UNamespaceId  {
+open func `import`(ticket: UDocTicket)async throws  -> UNamespaceId  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_unimusic_sync_fn_method_irohmanager_import(
                     self.uniffiClonePointer(),
-                    FfiConverterString.lower(ticket)
+                    FfiConverterTypeUDocTicket_lower(ticket)
                 )
             },
             pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
@@ -1224,7 +1224,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_or_create_namespace() != 46207) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 31939) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 21838) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file() != 12716) {
