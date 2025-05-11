@@ -8,7 +8,7 @@ on:
 
 jobs:
   format-lint:
-    runs-on: macos-14
+    runs-on: macos-15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-ios-swiftformat
       cancel-in-progress: true

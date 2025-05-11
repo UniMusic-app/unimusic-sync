@@ -12,7 +12,7 @@ env:
 
 jobs:
   rustfmt:
-    runs-on: macos-14
+    runs-on: macos-15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-rust-rustfmt
       cancel-in-progress: true
@@ -24,7 +24,7 @@ jobs:
         working-directory: rust
 
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-rust-build
       cancel-in-progress: true
