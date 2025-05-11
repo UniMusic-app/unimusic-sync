@@ -24,7 +24,7 @@ jobs:
         run: swiftformat . --lint
 
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-ios-build-lib
       cancel-in-progress: true
@@ -53,7 +53,7 @@ jobs:
           retention-days: 5
 
   test:
-    runs-on: macos-14
+    runs-on: macos-15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-ios-test
       cancel-in-progress: true
@@ -82,7 +82,7 @@ jobs:
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "15.3"
+          xcode-version: "16.3"
 
       - name: Install xcbeautify
         run: brew install xcbeautify
