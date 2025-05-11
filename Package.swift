@@ -24,7 +24,7 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "UniMusicSync",
-            targets: ["UniMusicSync"]
+            targets: ["UniMusicSync"],
         ),
     ],
     targets: [
@@ -32,12 +32,15 @@ let package = Package(
         .target(
             name: "UniMusicSync",
             dependencies: [.target(name: "UniFFI")],
-            path: "apple/Sources/UniMusicSync"
+            path: "apple/Sources/UniMusicSync",
         ),
         .target(
             name: "UniFFI",
             dependencies: [.target(name: "UniMusicSyncCoreRS")],
-            path: "apple/Sources/UniFFI"
+            path: "apple/Sources/UniFFI",
+            linkerSettings: [
+                .linkedFramework("SystemConfiguration"),
+            ],
         ),
         .testTarget(
             name: "UniMusicSyncTests",
