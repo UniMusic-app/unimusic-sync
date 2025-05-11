@@ -8,10 +8,6 @@
  */
 package app.unimusic.sync.core
 
-import app.unimusic.core.UniMusicSync
 import org.junit.Assert.*
-import org.junit.Test
 
-class UniMusicSyncTest {
-
-}
+class UniMusicSyncTest {}

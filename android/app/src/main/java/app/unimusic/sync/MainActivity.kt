@@ -14,10 +14,7 @@ import app.unimusic.core.UniMusicSync
 import app.unimusic.sync.ui.theme.UniMusicSyncTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
   var author = "Unknown"
@@ -26,11 +23,11 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
 
     CoroutineScope(Dispatchers.IO).launch {
-      println("CREATING IROH MANAGER...");
-      val irohManager = UniMusicSync.create(applicationContext.filesDir.path);
-      println("CREATED IROH MANAGER");
+      println("CREATING IROH MANAGER...")
+      val irohManager = UniMusicSync.create(applicationContext.filesDir.path)
+      println("CREATED IROH MANAGER")
       author = irohManager.irohManager.getAuthor()
-      print("GOT AUTHOR: ");
+      print("GOT AUTHOR: ")
 
       render()
     }
