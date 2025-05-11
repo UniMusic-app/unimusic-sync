@@ -38,14 +38,14 @@ let package = Package(
             name: "UniFFI",
             dependencies: [.target(name: "UniMusicSyncCoreRS")],
             path: "apple/Sources/UniFFI",
-            linkerSettings: [
-                .linkedFramework("SystemConfiguration"),
-            ],
         ),
         .testTarget(
             name: "UniMusicSyncTests",
             dependencies: ["UniMusicSync"],
-            path: "apple/Tests/UniMusicSyncTests"
+            path: "apple/Tests/UniMusicSyncTests",
+            linkerSettings: [
+                .linkedFramework("SystemConfiguration"),
+            ],
         ),
     ]
 )

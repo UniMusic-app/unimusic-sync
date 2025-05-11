@@ -63,7 +63,6 @@ jobs:
         scheme: [UniMusicSync]
         destination: [
             # TODO: Add more destinations
-            "platform=iOS Simulator,name=iPhone 15,OS=17.5",
             "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.4",
           ]
 
