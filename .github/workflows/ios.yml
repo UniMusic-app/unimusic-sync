@@ -35,6 +35,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Make sure that Package.swift is not configured for local development
+      run: |
+        if grep -q "let useLocalFramework = true" Package.swift; then
+          echo "Error: Package.swift is configured for local development. Please set useLocalFramework to false."
+          exit 1
+        fi
+
       - name: Build iOS XCFramework
         run: ./build-ios.sh --release
         working-directory: rust

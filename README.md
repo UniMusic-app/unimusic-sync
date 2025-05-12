@@ -1,4 +1,4 @@
-# UnimMusic Sync
+# UniMusic Sync
 
 ## Quick start
 

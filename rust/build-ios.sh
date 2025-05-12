@@ -9,6 +9,8 @@ set -u
 # In release mode, we create a ZIP archive of the xcframework and update Package.swift with the computed checksum.
 # This is only needed when cutting a new release, not for local development.
 release=false
+package_name=unimusic-sync
+lib_name=unimusic_sync
 
 for arg in "$@"; do
   case $arg in
@@ -56,14 +58,19 @@ build_xcframework() {
     echo "Building xcframework archive"
     ditto -c -k --sequesterRsrc --keepParent target/ios/lib$1-rs.xcframework target/ios/lib$1-rs.xcframework.zip
     checksum=$(swift package compute-checksum target/ios/lib$1-rs.xcframework.zip)
-    version=$(cargo metadata --format-version 1 | jq -r --arg pkg_name "$1" '.packages[] | select(.name==$pkg_name) .version')
+    version=$(cargo metadata --format-version 1 | jq -r ".packages[] | select(.name==\"$package_name\") .version")
+
+    # Update releaseTag and releaseChecksum
     sed -i "" -E "s/(let releaseTag = \")[^\"]+(\")/\1$version\2/g" ../Package.swift
     sed -i "" -E "s/(let releaseChecksum = \")[^\"]+(\")/\1$checksum\2/g" ../Package.swift
+
+    # Set useLocalFramework to false
+    sed -i "" -E "s/(let useLocalFramework = )true/\1false/g" ../Package.swift
+  else
+    # Set useLocalFramework to true
+    sed -i "" -E "s/(let useLocalFramework = )false/\1true/g" ../Package.swift
   fi
 }
-
-package_name=unimusic-sync
-lib_name=unimusic_sync
 
 cargo build -p $package_name --lib --release --target x86_64-apple-ios
 cargo build -p $package_name --lib --release --target aarch64-apple-ios-sim

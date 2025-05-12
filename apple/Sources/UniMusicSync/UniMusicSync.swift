@@ -1,3 +1,4 @@
+import SystemConfiguration
 import UniFFI
 
 public class UniMusicSync {

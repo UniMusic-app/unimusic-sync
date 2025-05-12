@@ -3,17 +3,26 @@
 
 import PackageDescription
 
-let binaryTarget: Target = .binaryTarget(
-    name: "UniMusicSyncCoreRS",
-    // IMPORTANT: Swift packages importing this locally will not be able to
-    // import the rust core unless you use a relative path.
-    // This ONLY works for local development. For a larger scale usage example, see https://github.com/stadiamaps/ferrostar.
-    // When you release a public package, you will need to build a release XCFramework,
-    // upload it somewhere (usually with your release), and update Package.swift.
-    // This will probably be the subject of a future blog.
-    // Again, see Ferrostar for a more complex example, including more advanced GitHub actions.
-    path: "./rust/target/ios/libunimusic_sync-rs.xcframework"
-)
+let useLocalFramework = false
+let binaryTarget: Target
+
+if useLocalFramework {
+    binaryTarget = .binaryTarget(
+        name: "UniMusicSyncCoreRS",
+        // IMPORTANT: Swift packages importing this locally will not be able to
+        // import UniMusicSync core unless you specify this as a relative path!
+        path: "./rust/target/ios/libunimusic_sync-rs.xcframework"
+    )
+} else {
+    let releaseTag = "0.0.1"
+    let releaseChecksum = "1d7a92b584c44bfe5393f8b5563aaf7a03a68e509aa8811c2570b4190bf45ea1"
+    binaryTarget = .binaryTarget(
+        name: "UniMusicSyncCoreRS",
+        url:
+        "https://github.com/UniMusic-app/unimusic-sync/releases/download/\(releaseTag)/libunimusic_sync-rs.xcframework.zip",
+        checksum: releaseChecksum
+    )
+}
 
 let package = Package(
     name: "UniMusicSync",
@@ -42,10 +51,7 @@ let package = Package(
         .testTarget(
             name: "UniMusicSyncTests",
             dependencies: ["UniMusicSync"],
-            path: "apple/Tests/UniMusicSyncTests",
-            linkerSettings: [
-                .linkedFramework("SystemConfiguration"),
-            ],
+            path: "apple/Tests/UniMusicSyncTests"
         ),
     ]
 )
