@@ -1,4 +1,4 @@
-package app.unimusic.core
+package app.unimusic.sync
 
 import uniffi.unimusic_sync.IrohFactory
 import uniffi.unimusic_sync.IrohManager

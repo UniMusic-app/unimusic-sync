@@ -1,4 +1,4 @@
-package app.unimusic.sync.ui.theme
+package app.unimusic.sync.demo.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -54,7 +54,6 @@ fun UniMusicSyncTheme(
   if (!view.isInEditMode) {
     SideEffect {
       val window = (view.context as Activity).window
-      window.statusBarColor = colorScheme.primary.toArgb()
       WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
     }
   }

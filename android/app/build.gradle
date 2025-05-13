@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace 'app.unimusic.sync'
-    compileSdk 34
+    namespace 'app.unimusic.sync.demo'
+    compileSdk 36
 
     defaultConfig {
-        applicationId "app.unimusic.sync"
+        applicationId "app.unimusic.sync.demo"
         minSdk 29
-        targetSdk 34
+        targetSdk 36
         versionCode 1
         versionName "1.0"
 

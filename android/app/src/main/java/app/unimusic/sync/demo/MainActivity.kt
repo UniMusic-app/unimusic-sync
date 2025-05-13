@@ -1,4 +1,7 @@
-package app.unimusic.sync
+package app.unimusic.sync.demo
+
+import app.unimusic.sync.demo.ui.theme.UniMusicSyncTheme
+import app.unimusic.sync.UniMusicSync
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,8 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import app.unimusic.core.UniMusicSync
-import app.unimusic.sync.ui.theme.UniMusicSyncTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

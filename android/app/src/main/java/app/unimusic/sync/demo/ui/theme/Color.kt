@@ -1,4 +1,4 @@
-package app.unimusic.sync.ui.theme
+package app.unimusic.sync.demo.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
