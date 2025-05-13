@@ -1,6 +1,8 @@
 # UniMusic Sync
 
-## Quick start
+A library to allow easy synchronisation between devices for [UniMusic](https://github.com/UniMusic-app/unimusic).
+
+## Development
 
 This repository is based on [ianthetechie's UniFFI Starter](https://github.com/ianthetechie/uniffi-starter/), which streamlined the process A LOT. Much appreciated.
 
