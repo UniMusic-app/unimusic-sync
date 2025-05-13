@@ -7,10 +7,6 @@ edition.workspace = true
 name = "unimusic_sync"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
-[profile.release]
-lto = true
-opt-level = "s"
-
 [dependencies]
 cfg-if = "^1.0.0"
 
