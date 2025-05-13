@@ -48,4 +48,5 @@ jobs:
         run: ./gradlew publishAllPublicationsToGithubPackagesRepository
         working-directory: android
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}

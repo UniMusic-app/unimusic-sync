@@ -99,7 +99,7 @@ mavenPublishing {
 publishing {
     repositories {
         maven {
-            name = "GitHubPackages"
+            name = "githubPackages"
             url = uri("https://maven.pkg.github.com/unimusic-app/unimusic-sync")
             credentials(PasswordCredentials)
         }
