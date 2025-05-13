@@ -5,11 +5,11 @@ on:
     types: [published]
 
 jobs:
-  build-and-test:
+  release:
     runs-on: buildjet-4vcpu-ubuntu-2204
     permissions:
       contents: read
-      packages: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -48,4 +48,5 @@ jobs:
         run: ./gradlew publishAllPublicationsToGithubPackagesRepository
         working-directory: android
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ github.actor }}
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
