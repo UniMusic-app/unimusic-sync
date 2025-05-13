@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace 'app.unimusic.sync'
-    compileSdk 36
+    compileSdk 35
     ndkVersion "26.2.11394342"
 
     defaultConfig {
         minSdk 29
-        targetSdk 36
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
