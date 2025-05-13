@@ -6,7 +6,7 @@
  * This solution is STUPIDLY INEFFICIENT and will probably contribute to global climate change since
  * an Android emulator uses like two whole CPU cores when idling.
  */
-package app.unimusic.sync.core
+package app.unimusic.sync
 
 import org.junit.Assert.*
 
