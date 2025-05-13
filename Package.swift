@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let useLocalFramework = true
+let useLocalFramework = false
 let binaryTarget: Target
 
 if useLocalFramework {
@@ -15,7 +15,7 @@ if useLocalFramework {
     )
 } else {
     let releaseTag = "0.0.1"
-    let releaseChecksum = "1d7a92b584c44bfe5393f8b5563aaf7a03a68e509aa8811c2570b4190bf45ea1"
+    let releaseChecksum = "0b3fd204de42cf5d9a0d3371eae3412a063772049360320b0160d2a6b22667dc"
     binaryTarget = .binaryTarget(
         name: "UniMusicSyncCoreRS",
         url:

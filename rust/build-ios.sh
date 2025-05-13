@@ -2,7 +2,6 @@
 
 set -e
 set -u
-set -x
 
 # NOTE: You MUST run this every time you make changes to the core. Unfortunately, calling this from Xcode directly
 # does not work so well.
@@ -50,7 +49,7 @@ build_xcframework() {
   # Builds an XCFramework
   echo "Generating XCFramework"
   rm -rf target/ios # Delete the output folder so we can regenerate it
-  xcodebuild -target iphoneos16 -create-xcframework \
+  xcodebuild -create-xcframework \
     -library target/aarch64-apple-ios/release/lib$1.a -headers target/uniffi-xcframework-staging \
     -library target/ios-simulator-fat/release/lib$1.a -headers target/uniffi-xcframework-staging \
     -output target/ios/lib$1-rs.xcframework
