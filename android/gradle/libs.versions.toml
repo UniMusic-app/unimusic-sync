@@ -1,5 +1,5 @@
 [versions]
-agp = "8.7.2"
+agp = "8.9.2"
 kotlin = "2.0.20"
 cargo-ndk = "0.3.4"
 ktfmt = "0.20.1"
@@ -13,6 +13,7 @@ junitVersion = "1.2.1"
 junitCompose = "1.7.5"
 espressoCore = "3.6.1"
 material = "1.12.0"
+mavenPublish = "0.31.0"
 
 [libraries]
 # AndroidX
@@ -41,3 +42,4 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 cargo-ndk = { id = "com.github.willir.rust.cargo-ndk-android", version.ref = "cargo-ndk" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
+mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }

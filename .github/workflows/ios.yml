@@ -42,7 +42,7 @@ jobs:
             exit 1
           fi
 
-      - name: Build iOS XCFramework
+      - name: 🏗 Build iOS XCFramework
         run: ./build-ios.sh --release
         working-directory: rust
 
@@ -51,8 +51,7 @@ jobs:
         with:
           file_pattern: "apple/Sources/UniFFI/*"
 
-      # This is incidentally quite similar to what a release workflow will look like
-      - name: "Upload Artifact"
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: libunimusic_sync-rs.xcframework.zip
@@ -97,10 +96,10 @@ jobs:
       - name: Install xcbeautify
         run: brew install xcbeautify
 
-      - name: Test ${{ matrix.scheme }} on ${{ matrix.destination }}
+      - name: 🧪 Test ${{ matrix.scheme }} on ${{ matrix.destination }}
         run: xcodebuild -scheme ${{ matrix.scheme }} test -skipMacroValidation -destination '${{ matrix.destination }}' | xcbeautify && exit ${PIPESTATUS[0]}
 
-      - name: "Upload Artifact"
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Library-Package.swift

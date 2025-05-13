@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let useLocalFramework = false
+let useLocalFramework = true
 let binaryTarget: Target
 
 if useLocalFramework {
@@ -27,7 +27,7 @@ if useLocalFramework {
 let package = Package(
     name: "UniMusicSync",
     platforms: [
-        .iOS(.v16),
+        .iOS(.v15),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.

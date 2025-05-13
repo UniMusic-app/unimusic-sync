@@ -2,6 +2,7 @@ plugins {
     alias libs.plugins.androidLibrary
     alias libs.plugins.jetbrainsKotlinAndroid
     alias libs.plugins.ktfmt
+    alias libs.plugins.mavenPublish
     // The magic plugin that automates the cargo integration
     alias libs.plugins.cargo.ndk
 }
@@ -66,8 +67,6 @@ android.libraryVariants.all { variant ->
 
     variant.javaCompileProvider.get().dependsOn(generateBindings)
 
-    // Some stuff here is broken, since Android Tests don't run after running gradle build,
-    // but do otherwise. Also CI is funky.
     tasks.named("compile${variant.name.capitalize()}Kotlin").configure {
         dependsOn generateBindings
     }
@@ -78,9 +77,34 @@ android.libraryVariants.all { variant ->
 
     def sourceSet = variant.sourceSets.find { it.name == variant.name }
     sourceSet.java.srcDir layout.buildDirectory.file("generated/source/uniffi/${variant.name}/java")
+}
 
-    // UniFFI tutorial notes that they made several attempts like this but were unsuccessful coming
-    // to a good solution for forcing the directory to be marked as generated (short of checking in
-    // project files, I suppose).
-    // idea.module.generatedSourceDirs += file("${buildDir}/generated/source/uniffi/${variant.name}/java/uniffi")
+mavenPublishing {
+    pom {
+        name = "UniMusicSync"
+        description = "Synchronisation library for UniMusic"
+        inceptionYear = "2025"
+        url = "https://github.com/UniMusic-app/unimusic-sync/"
+        licenses {
+            // TODO: License
+        }
+        scm {
+            url = "https://github.com/UniMusic-app/unimusic-sync/"
+            connection = "scm:git:git://github.com/UniMusic-app/unimusic-sync.git"
+            developerConnection = "scm:git:ssh://git@github.com/UniMusic-app/unimusic-sync.git"
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/unimusic-app/unimusic-sync")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("PASSWORD")
+            }
+        }
+    }
 }

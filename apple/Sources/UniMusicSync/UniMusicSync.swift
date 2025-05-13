@@ -1,4 +1,7 @@
-import SystemConfiguration
+#if canImport(SystemConfiguration)
+    import SystemConfiguration
+#endif
+
 import UniFFI
 
 public class UniMusicSync {
