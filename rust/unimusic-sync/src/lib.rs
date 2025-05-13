@@ -58,11 +58,9 @@ impl IrohFactory {
             .accept(BLOBS_ALPN, blobs.clone())
             .accept(GOSSIP_ALPN, gossip.clone())
             .accept(DOCS_ALPN, docs.clone())
-            .spawn()
-            .await?;
+            .spawn();
 
         Ok(IrohManager {
-            endpoint,
             router,
 
             blobs,
@@ -76,7 +74,6 @@ type PersistentStore = iroh_blobs::store::fs::Store;
 
 #[derive(Debug, uniffi::Object)]
 pub struct IrohManager {
-    pub endpoint: Endpoint,
     pub router: Router,
 
     pub blobs: Blobs<PersistentStore>,
@@ -89,7 +86,6 @@ impl IrohManager {
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn shutdown(&self) -> Result<()> {
         self.router.shutdown().await?;
-        self.endpoint.close().await;
         Ok(())
     }
 
