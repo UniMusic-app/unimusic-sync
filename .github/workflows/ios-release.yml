@@ -33,7 +33,7 @@ jobs:
           git push --delete origin ${{ github.event.release.tag_name }}
 
           # Create new one
-          git tag -a ${{ github.event.release.tag_name }}
+          git tag -a ${{ github.event.release.tag_name }} -m "update swift package checksum"
           git push origin --tags
 
       - name: 📤 Upload Release
