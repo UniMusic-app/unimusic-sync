@@ -1,4 +1,4 @@
-package app.unimusic.sync
+package app.unimusic.sync.demo
 
 import org.junit.Assert.*
 import org.junit.Test
