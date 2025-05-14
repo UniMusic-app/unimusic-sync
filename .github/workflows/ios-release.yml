@@ -18,6 +18,9 @@ jobs:
         run: ./build-ios.sh --release
         working-directory: rust
 
+      - name: Commit updated Package checksum
+        uses: stefanzweifel/git-auto-commit-action@v5
+
       - name: 📤 Upload Release
         uses: softprops/action-gh-release@v2
         with:
