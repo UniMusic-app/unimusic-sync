@@ -23,6 +23,18 @@ jobs:
 
       - name: Commit updated Package checksum
         uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: chore(automated): update swift package checksum
+
+      - name: Move tag to current position (so Swift PM downloads correct package)
+        run: |
+          # Remove current tag
+          git tag -d ${{ github.event.release.tag_name }}
+          git push --delete origin ${{ github.event.release.tag_name }}
+
+          # Create new one
+          git tag -a ${{ github.event.release.tag_name }}
+          git push origin --tags
 
       - name: 📤 Upload Release
         uses: softprops/action-gh-release@v2
