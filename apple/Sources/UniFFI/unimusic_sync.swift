@@ -536,7 +536,7 @@ open func irohManager(path: String)async throws  -> IrohManager  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_pointer,
             freeFunc: ffi_unimusic_sync_rust_future_free_pointer,
             liftFunc: FfiConverterTypeIrohManager_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -602,9 +602,13 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func getAuthor() async throws  -> UAuthorId
     
+    func getKnownNodes() async  -> [UNodeId]
+    
     func getOrCreateNamespace() async throws  -> UNamespaceId
     
     func `import`(ticket: UDocTicket) async throws  -> UNamespaceId
+    
+    func listen(namespace: UNamespaceId) async throws 
     
     func readFile(namespace: UNamespaceId, path: String) async throws  -> Data
     
@@ -682,7 +686,25 @@ open func getAuthor()async throws  -> UAuthorId  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUAuthorId_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func getKnownNodes()async  -> [UNodeId]  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_get_known_nodes(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeUNodeId.lift,
+            errorHandler: nil
+            
         )
 }
     
@@ -699,7 +721,7 @@ open func getOrCreateNamespace()async throws  -> UNamespaceId  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUNamespaceId_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -716,7 +738,24 @@ open func `import`(ticket: UDocTicket)async throws  -> UNamespaceId  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUNamespaceId_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func listen(namespace: UNamespaceId)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_listen(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -733,7 +772,7 @@ open func readFile(namespace: UNamespaceId, path: String)async throws  -> Data  
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterData.lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -750,7 +789,7 @@ open func readFileHash(hash: UHash)async throws  -> Data  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterData.lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -767,7 +806,7 @@ open func share(namespace: UNamespaceId)async throws  -> UDocTicket  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUDocTicket_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -784,7 +823,7 @@ open func shutdown()async throws   {
             completeFunc: ffi_unimusic_sync_rust_future_complete_void,
             freeFunc: ffi_unimusic_sync_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -801,7 +840,7 @@ open func writeFile(namespace: UNamespaceId, path: String, data: Data)async thro
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUHash_lift,
-            errorHandler: FfiConverterTypeIrohManagerError_lift
+            errorHandler: FfiConverterTypeSharedError_lift
         )
 }
     
@@ -861,7 +900,7 @@ public func FfiConverterTypeIrohManager_lower(_ value: IrohManager) -> UnsafeMut
 
 
 
-public enum IrohManagerError: Swift.Error {
+public enum SharedError: Swift.Error {
 
     
     
@@ -869,11 +908,17 @@ public enum IrohManagerError: Swift.Error {
     )
     case IrohGossip(String
     )
+    case Serde(String
+    )
+    case Io(String
+    )
     case ReplicaMissing(UNamespaceId
     )
     case EntryMissing(UNamespaceId,String
     )
     case InvalidNamespaceId(String
+    )
+    case SyncFailed(String
     )
 }
 
@@ -881,10 +926,10 @@ public enum IrohManagerError: Swift.Error {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public struct FfiConverterTypeIrohManagerError: FfiConverterRustBuffer {
-    typealias SwiftType = IrohManagerError
+public struct FfiConverterTypeSharedError: FfiConverterRustBuffer {
+    typealias SwiftType = SharedError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> IrohManagerError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SharedError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
@@ -897,14 +942,23 @@ public struct FfiConverterTypeIrohManagerError: FfiConverterRustBuffer {
         case 2: return .IrohGossip(
             try FfiConverterString.read(from: &buf)
             )
-        case 3: return .ReplicaMissing(
+        case 3: return .Serde(
+            try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .Io(
+            try FfiConverterString.read(from: &buf)
+            )
+        case 5: return .ReplicaMissing(
             try FfiConverterTypeUNamespaceId.read(from: &buf)
             )
-        case 4: return .EntryMissing(
+        case 6: return .EntryMissing(
             try FfiConverterTypeUNamespaceId.read(from: &buf), 
             try FfiConverterString.read(from: &buf)
             )
-        case 5: return .InvalidNamespaceId(
+        case 7: return .InvalidNamespaceId(
+            try FfiConverterString.read(from: &buf)
+            )
+        case 8: return .SyncFailed(
             try FfiConverterString.read(from: &buf)
             )
 
@@ -912,7 +966,7 @@ public struct FfiConverterTypeIrohManagerError: FfiConverterRustBuffer {
         }
     }
 
-    public static func write(_ value: IrohManagerError, into buf: inout [UInt8]) {
+    public static func write(_ value: SharedError, into buf: inout [UInt8]) {
         switch value {
 
         
@@ -929,19 +983,34 @@ public struct FfiConverterTypeIrohManagerError: FfiConverterRustBuffer {
             FfiConverterString.write(v1, into: &buf)
             
         
-        case let .ReplicaMissing(v1):
+        case let .Serde(v1):
             writeInt(&buf, Int32(3))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Io(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .ReplicaMissing(v1):
+            writeInt(&buf, Int32(5))
             FfiConverterTypeUNamespaceId.write(v1, into: &buf)
             
         
         case let .EntryMissing(v1,v2):
-            writeInt(&buf, Int32(4))
+            writeInt(&buf, Int32(6))
             FfiConverterTypeUNamespaceId.write(v1, into: &buf)
             FfiConverterString.write(v2, into: &buf)
             
         
         case let .InvalidNamespaceId(v1):
-            writeInt(&buf, Int32(5))
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .SyncFailed(v1):
+            writeInt(&buf, Int32(8))
             FfiConverterString.write(v1, into: &buf)
             
         }
@@ -952,24 +1021,24 @@ public struct FfiConverterTypeIrohManagerError: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeIrohManagerError_lift(_ buf: RustBuffer) throws -> IrohManagerError {
-    return try FfiConverterTypeIrohManagerError.lift(buf)
+public func FfiConverterTypeSharedError_lift(_ buf: RustBuffer) throws -> SharedError {
+    return try FfiConverterTypeSharedError.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeIrohManagerError_lower(_ value: IrohManagerError) -> RustBuffer {
-    return FfiConverterTypeIrohManagerError.lower(value)
+public func FfiConverterTypeSharedError_lower(_ value: SharedError) -> RustBuffer {
+    return FfiConverterTypeSharedError.lower(value)
 }
 
 
-extension IrohManagerError: Equatable, Hashable {}
+extension SharedError: Equatable, Hashable {}
 
 
 
 
-extension IrohManagerError: Foundation.LocalizedError {
+extension SharedError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
@@ -977,6 +1046,31 @@ extension IrohManagerError: Foundation.LocalizedError {
 
 
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUNodeId: FfiConverterRustBuffer {
+    typealias SwiftType = [UNodeId]
+
+    public static func write(_ value: [UNodeId], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUNodeId.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UNodeId] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UNodeId]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUNodeId.read(from: &buf))
+        }
+        return seq
+    }
+}
 
 
 /**
@@ -1153,6 +1247,50 @@ public func FfiConverterTypeUNamespaceId_lower(_ value: UNamespaceId) -> RustBuf
     return FfiConverterTypeUNamespaceId.lower(value)
 }
 
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias UNodeId = String
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUNodeId: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UNodeId {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: UNodeId, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> UNodeId {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: UNodeId) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUNodeId_lift(_ value: RustBuffer) throws -> UNodeId {
+    return try FfiConverterTypeUNodeId.lift(value)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUNodeId_lower(_ value: UNodeId) -> RustBuffer {
+    return FfiConverterTypeUNodeId.lower(value)
+}
+
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
@@ -1215,31 +1353,37 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohfactory_iroh_manager() != 5871) {
+    if (uniffi_unimusic_sync_checksum_method_irohfactory_iroh_manager() != 12195) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_author() != 22331) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_author() != 10682) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_or_create_namespace() != 46207) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_known_nodes() != 24320) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 21838) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_or_create_namespace() != 6226) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file() != 12716) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 64620) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file_hash() != 32574) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_listen() != 51604) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_share() != 6878) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file() != 65013) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_shutdown() != 27685) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file_hash() != 51068) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_write_file() != 36373) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_share() != 39114) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_shutdown() != 62159) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_write_file() != 6891) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_constructor_irohfactory_new() != 4899) {
