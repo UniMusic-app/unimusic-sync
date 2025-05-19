@@ -1,6 +1,8 @@
 // Iroh types passable via UniFFI
+use iroh::{NodeId, node_info::NodeData};
 use iroh_blobs::Hash;
 use iroh_docs::{AuthorId, DocTicket, NamespaceId};
+use serde::{Deserialize, Serialize};
 
 use std::fmt::Display;
 use std::str::FromStr;
@@ -39,6 +41,31 @@ uniffiable_wrapper!(AuthorId, UAuthorId);
 #[derive(Debug, Clone, Copy)]
 pub struct UNamespaceId(NamespaceId);
 uniffiable_wrapper!(NamespaceId, UNamespaceId);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct UNodeId(pub NodeId);
+uniffiable_wrapper!(NodeId, UNodeId);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UNodeData {
+    pub relay_url: Option<iroh::RelayUrl>,
+    pub direct_addresses: std::collections::BTreeSet<std::net::SocketAddr>,
+}
+
+impl From<UNodeData> for NodeData {
+    fn from(value: UNodeData) -> Self {
+        NodeData::new(value.relay_url, value.direct_addresses)
+    }
+}
+
+impl From<NodeData> for UNodeData {
+    fn from(value: NodeData) -> Self {
+        UNodeData {
+            relay_url: value.relay_url().cloned(),
+            direct_addresses: value.direct_addresses().clone(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct UHash(Hash);

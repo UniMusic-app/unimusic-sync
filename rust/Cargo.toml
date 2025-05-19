@@ -7,5 +7,7 @@ package.edition = "2024"
 uniffi = "0.29.2"
 
 [profile.release]
-lto = true
-opt-level = "s"
+lto = "fat"
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"

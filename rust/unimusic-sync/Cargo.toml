@@ -9,6 +9,12 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 cfg-if = "^1.0.0"
+rand = "0.8"
+
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+
+thiserror = "^2.0.12"
 
 tokio = "^1.45.0"
 tokio-stream = "^0.1.17"
@@ -18,7 +24,6 @@ iroh-blobs = { version = "^0.35.0" }
 iroh-docs = { version = "^0.35.0", features = ["rpc"] }
 iroh-gossip = { version = "^0.35.0" }
 
-thiserror = "^2.0.12"
 
 uniffi = { workspace = true, features = ["tokio"] }
 
