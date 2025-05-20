@@ -38,7 +38,7 @@ macro_rules! uniffiable_wrapper {
 pub struct UAuthorId(AuthorId);
 uniffiable_wrapper!(AuthorId, UAuthorId);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UNamespaceId(NamespaceId);
 uniffiable_wrapper!(NamespaceId, UNamespaceId);
 

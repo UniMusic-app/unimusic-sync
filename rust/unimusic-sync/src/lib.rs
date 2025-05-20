@@ -7,13 +7,16 @@ use types::{UAuthorId, UDocTicket, UHash, UNamespaceId, UNodeId};
 mod node_storage;
 use node_storage::NodeStorage;
 
+use log::{info, warn};
+
 use std::{
     borrow::Cow,
+    fmt::Debug,
     path::PathBuf,
     sync::{Arc, LazyLock},
 };
 
-use iroh::{Endpoint, protocol::Router};
+use iroh::{Endpoint, NodeAddr, protocol::Router};
 use iroh_blobs::{ALPN as BLOBS_ALPN, net_protocol::Blobs};
 use iroh_docs::{
     ALPN as DOCS_ALPN,
@@ -31,7 +34,7 @@ uniffi::setup_scaffolding!();
 
 pub static TOKIO_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
     let mut builder = tokio::runtime::Builder::new_multi_thread();
-    builder.enable_all(); // and others
+    builder.enable_all();
     let rt = builder.build().unwrap();
     rt.block_on(uniffi::deps::async_compat::Compat::new(async {}));
     rt
@@ -76,23 +79,23 @@ impl IrohFactory {
             .spawn();
 
         let node_storage = NodeStorage::load(path.join("nodes.json")).await?;
-        let node_storage: Arc<RwLock<NodeStorage>> = Arc::new(RwLock::new(node_storage));
+
+        let node_storage = Arc::new(RwLock::new(node_storage));
 
         {
-            let node_ids = node_storage.clone();
+            let node_storage = node_storage.clone();
             tokio::spawn(async move {
-                while let Some(event) = endpoint.discovery_stream().next().await {
-                    let discovery_item = match event {
-                        Ok(event) => event,
+                while let Some(item) = endpoint.discovery_stream().next().await {
+                    let discovery_item = match item {
+                        Ok(item) => item,
                         Err(error) => {
-                            eprintln!("{error}");
+                            warn!("Lagging behind: {error}");
                             continue;
                         }
                     };
 
                     let node_info = discovery_item.node_info();
-                    println!("Discovered a new node: {:?}", discovery_item.node_info());
-                    node_ids
+                    node_storage
                         .write()
                         .await
                         .upsert_node(node_info.node_id, Cow::Borrowed(&node_info.data))
@@ -139,6 +142,25 @@ impl IrohManager {
         Ok(())
     }
 
+    pub async fn reconnect(&self) {
+        for (node_id, node_data) in self.node_storage.read().await.nodes.iter() {
+            let node_addr = NodeAddr::from_parts(
+                (*node_id).into(),
+                node_data.relay_url.clone(),
+                node_data.direct_addresses.clone(),
+            );
+
+            match self.router.endpoint().connect(node_addr, DOCS_ALPN).await {
+                Ok(_) => {
+                    info!("[reconnect] Connected to {node_id}");
+                }
+                Err(error) => {
+                    warn!("[reconnect] Failed to establish a connection with {node_id}: {error}")
+                }
+            }
+        }
+    }
+
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn get_known_nodes(&self) -> Vec<UNodeId> {
         self.node_storage
@@ -159,13 +181,8 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
-    pub async fn get_or_create_namespace(&self) -> Result<UNamespaceId> {
+    pub async fn create_namespace(&self) -> Result<UNamespaceId> {
         let docs_client = self.docs.client();
-
-        if let Some(doc) = docs_client.list().await?.next().await {
-            return Ok(doc?.0.into());
-        }
-
         let doc = docs_client.create().await?;
         Ok(doc.id().into())
     }
@@ -232,12 +249,29 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
-    pub async fn listen(&self, namespace: UNamespaceId) -> Result<()> {
+    pub async fn sync(&self, namespace: UNamespaceId) -> Result<()> {
         let docs_client = self.docs.client();
         let replica = docs_client
             .open(namespace.into())
             .await?
             .ok_or(SharedError::ReplicaMissing(namespace))?;
+
+        let node_addrs = {
+            let node_storage = self.node_storage.read().await;
+            node_storage
+                .nodes
+                .iter()
+                .map(|(node_id, node_data)| {
+                    NodeAddr::from_parts(
+                        (*node_id).into(),
+                        node_data.relay_url.clone(),
+                        node_data.direct_addresses.clone(),
+                    )
+                })
+                .collect()
+        };
+
+        replica.start_sync(node_addrs).await?;
 
         let mut event_stream = replica.subscribe().await?;
         while let Some(event) = event_stream.try_next().await? {
@@ -246,23 +280,33 @@ impl IrohManager {
                     if let Err(err_message) = event.result {
                         return Err(SharedError::SyncFailed(err_message));
                     }
+                    info!("[namespace {namespace}] sync finished");
                 }
                 LiveEvent::ContentReady { hash } => {
-                    println!("Downloaded: {hash}")
+                    info!("[namespace {namespace}] Downloaded: {hash}")
                 }
                 LiveEvent::InsertLocal { entry } => {
-                    println!("Locally inserted: {entry:?}");
+                    info!("[namespace {namespace}] Locally inserted: {entry:?}");
                 }
                 LiveEvent::InsertRemote {
                     from,
                     entry,
                     content_status,
                 } => {
-                    println!("{from} inserted: {entry:?} (available: {content_status:?})")
+                    info!(
+                        "[namespace {namespace}] {} inserted: {} (available: {content_status:?})",
+                        from.fmt_short(),
+                        entry.content_hash().fmt_short()
+                    );
                 }
-                LiveEvent::PendingContentReady => println!("Content ready"),
-                LiveEvent::NeighborDown(key) => println!("{key} disconnected"),
-                LiveEvent::NeighborUp(key) => println!("{key} connected"),
+                LiveEvent::PendingContentReady => {
+                    info!("[namespace {namespace}] content ready");
+                    break;
+                }
+                LiveEvent::NeighborDown(key) => {
+                    info!("[namespace {namespace}] {key} disconnected");
+                }
+                LiveEvent::NeighborUp(key) => info!("[namespace {namespace}] {key} connected"),
             }
         }
 
@@ -275,17 +319,46 @@ impl IrohManager {
 
         let docs_client = self.docs.client();
 
-        println!("Trying to import ticket: {ticket:?}");
-
+        info!("[ticket] importing {ticket}");
         let (replica, mut event_stream) = docs_client.import_and_subscribe(ticket).await?;
+        let namespace = replica.id();
+        info!("[ticket] syncing namespace {namespace}");
         while let Some(event) = event_stream.try_next().await? {
             match event {
-                LiveEvent::PendingContentReady => break,
-                _ => {}
+                LiveEvent::SyncFinished(event) => {
+                    if let Err(err_message) = event.result {
+                        return Err(SharedError::SyncFailed(err_message));
+                    }
+                    info!("[namespace {namespace}] sync finished");
+                }
+                LiveEvent::ContentReady { hash } => {
+                    info!("[namespace {namespace}] Downloaded: {hash}")
+                }
+                LiveEvent::InsertLocal { entry } => {
+                    info!("[namespace {namespace}] Locally inserted: {entry:?}");
+                }
+                LiveEvent::InsertRemote {
+                    from,
+                    entry,
+                    content_status,
+                } => {
+                    info!(
+                        "[namespace {namespace}] {} inserted: {} (available: {content_status:?})",
+                        from.fmt_short(),
+                        entry.content_hash().fmt_short()
+                    );
+                }
+                LiveEvent::PendingContentReady => {
+                    info!("[namespace {namespace}] content ready");
+                    break;
+                }
+                LiveEvent::NeighborDown(key) => {
+                    info!("[namespace {namespace}] {key} disconnected");
+                }
+                LiveEvent::NeighborUp(key) => info!("[namespace {namespace}] {key} connected"),
             }
         }
-
-        println!("Imported ticket");
+        info!("[ticket] imported namespace {namespace}");
 
         Ok(replica.id().into())
     }
