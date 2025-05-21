@@ -34,5 +34,5 @@ jobs:
         run: cargo build --verbose
         working-directory: rust
       - name: Run tests
-        run: cargo test --verbose
+        run: RUST_LOG=info cargo test --verbose
         working-directory: rust
