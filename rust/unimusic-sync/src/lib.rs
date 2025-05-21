@@ -378,7 +378,10 @@ mod test {
 
     type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
 
-    static MODIFIED_DOGS: &[u8] = "German Shephard, Husky, Pomeranian".as_bytes();
+    static MODIFIED_FILE: (&str, &[u8]) = (
+        "dog_breeds.txt",
+        "German Shephard, Husky, Pomeranian".as_bytes(),
+    );
     static TEST_FILES: [(&str, &[u8]); 2] = [
         (
             "dog_breeds.txt",
@@ -472,7 +475,7 @@ mod test {
             file_hashes.push(file_hash);
         }
 
-        info!("[provider] share ticke");
+        info!("[provider] share ticket");
         let ticket = provider.share(namespace).await?;
 
         let mut set = JoinSet::new();
@@ -501,9 +504,12 @@ mod test {
                 let imported_namespace = receiver.import((*ticket).clone()).await?;
                 assert_eq!(namespace, imported_namespace);
 
+                info!("[receiver {i}]: imported ticket, waiting 5 seconds for it to propagate...");
+                tokio::time::sleep(Duration::from_secs(5)).await;
+
                 info!("[receiver {i}]: make sure files are got properly imported");
-                for (i, (path, contents)) in TEST_FILES.iter().enumerate() {
-                    info!("[receiver {i}]: ... properly imported {path}");
+                for (i, (path, contents)) in TEST_FILES.into_iter().enumerate() {
+                    info!("[receiver {i}]: make sure {path} gets properly imported");
                     assert_eq!(&receiver.read_file_hash(file_hashes[i]).await?, contents);
                     assert_eq!(&receiver.read_file(namespace, path).await?, contents);
                 }
@@ -519,17 +525,17 @@ mod test {
             result.unwrap()?;
         }
 
-        info!("[provider]: modify dogs.txt");
+        info!("[provider]: modify {}", MODIFIED_FILE.0);
         provider
             .write_file(
                 namespace,
-                TEST_FILES[0].0.to_string(),
-                MODIFIED_DOGS.to_vec(),
+                MODIFIED_FILE.0.to_string(),
+                MODIFIED_FILE.1.to_vec(),
             )
             .await?;
         assert_eq!(
-            provider.read_file(namespace, TEST_FILES[0].0).await?,
-            MODIFIED_DOGS
+            provider.read_file(namespace, MODIFIED_FILE.0).await?,
+            MODIFIED_FILE.1
         );
 
         let mut set = JoinSet::new();
@@ -579,8 +585,8 @@ mod test {
 
                 info!("[receiver {i}]: make sure file got properly synced");
                 assert_eq!(
-                    &receiver.read_file(namespace, TEST_FILES[0].0).await?,
-                    MODIFIED_DOGS
+                    &receiver.read_file(namespace, MODIFIED_FILE.0).await?,
+                    MODIFIED_FILE.1
                 );
 
                 Ok(receiver)
