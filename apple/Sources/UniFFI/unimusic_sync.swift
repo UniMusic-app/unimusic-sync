@@ -600,23 +600,25 @@ public func FfiConverterTypeIrohFactory_lower(_ value: IrohFactory) -> UnsafeMut
 
 public protocol IrohManagerProtocol: AnyObject, Sendable {
     
+    func createNamespace() async throws  -> UNamespaceId
+    
     func getAuthor() async throws  -> UAuthorId
     
     func getKnownNodes() async  -> [UNodeId]
     
-    func getOrCreateNamespace() async throws  -> UNamespaceId
-    
     func `import`(ticket: UDocTicket) async throws  -> UNamespaceId
-    
-    func listen(namespace: UNamespaceId) async throws 
     
     func readFile(namespace: UNamespaceId, path: String) async throws  -> Data
     
     func readFileHash(hash: UHash) async throws  -> Data
     
+    func reconnect() async 
+    
     func share(namespace: UNamespaceId) async throws  -> UDocTicket
     
     func shutdown() async throws 
+    
+    func sync(namespace: UNamespaceId) async throws 
     
     func writeFile(namespace: UNamespaceId, path: String, data: Data) async throws  -> UHash
     
@@ -673,6 +675,23 @@ open class IrohManager: IrohManagerProtocol, @unchecked Sendable {
     
 
     
+open func createNamespace()async throws  -> UNamespaceId  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_create_namespace(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeUNamespaceId_lift,
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
 open func getAuthor()async throws  -> UAuthorId  {
     return
         try  await uniffiRustCallAsync(
@@ -708,23 +727,6 @@ open func getKnownNodes()async  -> [UNodeId]  {
         )
 }
     
-open func getOrCreateNamespace()async throws  -> UNamespaceId  {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_unimusic_sync_fn_method_irohmanager_get_or_create_namespace(
-                    self.uniffiClonePointer()
-                    
-                )
-            },
-            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
-            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
-            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeUNamespaceId_lift,
-            errorHandler: FfiConverterTypeSharedError_lift
-        )
-}
-    
 open func `import`(ticket: UDocTicket)async throws  -> UNamespaceId  {
     return
         try  await uniffiRustCallAsync(
@@ -738,23 +740,6 @@ open func `import`(ticket: UDocTicket)async throws  -> UNamespaceId  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUNamespaceId_lift,
-            errorHandler: FfiConverterTypeSharedError_lift
-        )
-}
-    
-open func listen(namespace: UNamespaceId)async throws   {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_unimusic_sync_fn_method_irohmanager_listen(
-                    self.uniffiClonePointer(),
-                    FfiConverterTypeUNamespaceId_lower(namespace)
-                )
-            },
-            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
-            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
-            freeFunc: ffi_unimusic_sync_rust_future_free_void,
-            liftFunc: { $0 },
             errorHandler: FfiConverterTypeSharedError_lift
         )
 }
@@ -793,6 +778,24 @@ open func readFileHash(hash: UHash)async throws  -> Data  {
         )
 }
     
+open func reconnect()async   {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_reconnect(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: nil
+            
+        )
+}
+    
 open func share(namespace: UNamespaceId)async throws  -> UDocTicket  {
     return
         try  await uniffiRustCallAsync(
@@ -817,6 +820,23 @@ open func shutdown()async throws   {
                 uniffi_unimusic_sync_fn_method_irohmanager_shutdown(
                     self.uniffiClonePointer()
                     
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func sync(namespace: UNamespaceId)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_sync(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace)
                 )
             },
             pollFunc: ffi_unimusic_sync_rust_future_poll_void,
@@ -1356,19 +1376,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohfactory_iroh_manager() != 12195) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_create_namespace() != 50579) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_author() != 10682) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_known_nodes() != 24320) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_or_create_namespace() != 6226) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 64620) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_listen() != 51604) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file() != 65013) {
@@ -1377,10 +1394,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohmanager_read_file_hash() != 51068) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_reconnect() != 11612) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_share() != 39114) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_shutdown() != 62159) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_sync() != 12334) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_write_file() != 6891) {

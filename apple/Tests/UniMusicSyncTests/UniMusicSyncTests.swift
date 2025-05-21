@@ -2,6 +2,7 @@ import XCTest
 
 @testable import UniMusicSync
 
+let MODIFIED_FILE = ( path: "dog_breeds.txt", contents: Data("German Shephard, Husky, Pomeranian".utf8))
 let TEST_FILES = [
     "dog_breeds.txt": Data("American Eskimo Dog, Husky, Cocker Spaniel, Pomeranian".utf8),
     "bing chilling.txt": Data("""
@@ -73,96 +74,89 @@ final class UniMusicSyncTests: XCTestCase {
             XCTAssertEqual(file, contents)
         }
 
-        func testProvider() async throws -> (UAuthorId, UNamespaceId, [UHash], UDocTicket) {
-            let provider = try await mockClient(dir: "provider")
-            self.provider = provider
-            let author = try await provider.getAuthor()
+        func testReceiver(dir: String, author _: UAuthorId, namespace: UNamespaceId, fileHashes: [UHash], docTicket: UDocTicket) async throws {}
 
-            // MARK: Make sure namespace gets reused
+        let provider = try await mockClient(dir: "provider")
+        self.provider = provider
 
-            let namespace = try await provider.getOrCreateNamespace()
-            if true {
-                let namespace2 = try await provider.getOrCreateNamespace()
-                XCTAssertEqual(namespace, namespace2)
-            }
+        print("[provider]: create namespace")
+        let namespace = try await provider.createNamespace()
 
-            Task {
-                try await provider.listen(namespace)
-            }
+        // MARK: Make sure all files get written correctly
 
-            // MARK: Make sure all files get written correctly
-
-            var fileHashes: [UHash] = []
-            for (path, contents) in TEST_FILES {
-                let fileHash = try await provider.writeFile(namespace, path, contents)
-                try await compareFileContents(provider, fileHash: fileHash, contents: contents)
-                try await compareFileContents(provider, namespace: namespace, path: path, contents: contents)
-                fileHashes.append(fileHash)
-            }
-
-            let docTicket = try await provider.share(namespace)
-
-            return (author, namespace, fileHashes, docTicket)
+        var fileHashes: [UHash] = []
+        print("[provider]: write files")
+        for (path, contents) in TEST_FILES {
+            let fileHash = try await provider.writeFile(namespace, path, contents)
+            try await compareFileContents(provider, fileHash: fileHash, contents: contents)
+            try await compareFileContents(provider, namespace: namespace, path: path, contents: contents)
+            fileHashes.append(fileHash)
         }
 
-        func testReceiver(dir: String, author _: UAuthorId, namespace: UNamespaceId, fileHashes: [UHash], docTicket: UDocTicket) async throws {
-            let receiver = try await mockClient(dir: dir)
-
-            // MARK: Make sure files are empty before syncing
-
-            for fileHash in fileHashes {
-                try await compareFileContents(receiver, fileHash: fileHash, contents: .none)
-            }
-            for (path, _) in TEST_FILES {
-                try await compareFileContents(receiver, namespace: namespace, path: path, contents: .none)
-            }
-
-            // MARK: Make sure imported namespace is equal to the provider one
-
-            let importedNamespace = try await receiver.import(docTicket)
-            XCTAssertEqual(importedNamespace, namespace)
-
-            // MARK: Make sure all files match
-
-            for (i, (path, contents)) in TEST_FILES.enumerated() {
-                print("File hashes: \(fileHashes)")
-                print("Comparing \(path), contents: \(contents)")
-                try await compareFileContents(receiver, fileHash: fileHashes[i], contents: contents)
-                try await compareFileContents(receiver, namespace: namespace, path: path, contents: contents)
-            }
-        }
-
-        let (author, namespace, fileHashes, docTicket) = try await testProvider()
+        print("[provider]: share ticket]")
+        let docTicket = try await provider.share(namespace)
 
         // MARK: Test 5 concurrent connections
+        try await withThrowingTaskGroup { group in
+            for try i in 0 ..< 5 {
+                group.addTask {
+                    let receiver = try await mockClient(dir: "receiver_\(i)")
 
-        if true {
-            try await withThrowingTaskGroup { group in
-                for try i in 0 ... 5 {
-                    group.addTask {
-                        try await testReceiver(
-                            dir: "receiver_\(i)",
-                            author: author,
-                            namespace: namespace,
-                            fileHashes: fileHashes,
-                            docTicket: docTicket
-                        )
+                    print("[receiver \(i)]: make sure files are empty before import")
+
+                    for fileHash in fileHashes {
+                        try await compareFileContents(receiver, fileHash: fileHash, contents: .none)
+                    }
+                    for (path, _) in TEST_FILES {
+                        try await compareFileContents(receiver, namespace: namespace, path: path, contents: .none)
+                    }
+
+                    print("[receiver \(i)]: make sure imported namespace is equal to the provider one")
+                    
+                    let importedNamespace = try await receiver.import(docTicket)
+                    XCTAssertEqual(importedNamespace, namespace)
+
+                    print("[receiver \(i)]: make sure files get properly imported")
+                    for (i, (path, contents)) in TEST_FILES.enumerated() {
+                        print("[receiver \(i)]: make sure \(path) gets properly imported")
+                        try await compareFileContents(receiver, fileHash: fileHashes[i], contents: contents)
+                        try await compareFileContents(receiver, namespace: namespace, path: path, contents: contents)
                     }
                 }
             }
-
-            // Wait for databases to close
-            try await Task.sleep(nanoseconds: 5 * NSEC_PER_SEC)
         }
 
-        // MARK: Make sure nodes are getting saved
+        // Wait for databases to close
+        try await Task.sleep(nanoseconds: 5 * NSEC_PER_SEC)
 
-        if true {
-            let client = try await mockClient(dir: "receiver_0")
-            let nodes = await client.irohManager.getKnownNodes()
-            XCTAssertEqual(nodes.isEmpty, false)
+        print("[provider]: modify \(MODIFIED_FILE.path)")
+        let fileHash = try await provider.writeFile(namespace, MODIFIED_FILE.path, MODIFIED_FILE.contents)
+        try await compareFileContents(provider, fileHash: fileHash, contents: MODIFIED_FILE.contents)
+        
+        // MARK: Make sure nodes properly reconnect and sync
+
+        try await withThrowingTaskGroup { group in
+            for try i in 0 ..< 5 {
+                group.addTask {
+                    print("[receiver \(i)]: recreate")
+                    let receiver = try await mockClient(dir: "receiver_\(i)")
+                    
+                    print("[receiver \(i)]: make sure all files are still there")
+                    for (i, (path, contents)) in TEST_FILES.enumerated() {
+                        try await compareFileContents(receiver, fileHash: fileHashes[i], contents: contents)
+                        try await compareFileContents(receiver, namespace: namespace, path: path, contents: contents)
+                    }
+                    
+                    print("[receiver \(i)]: reconnect")
+                    await receiver.reconnect()
+                    
+                    print("[receiver \(i)]: sync")
+                    try await receiver.sync(namespace)
+                    
+                    print("[receiver \(i)]: make sure file got properly synced")
+                    try await compareFileContents(receiver, fileHash: fileHash, contents: MODIFIED_FILE.contents)
+                }
+            }
         }
     }
-
-    // TODO: Tests for synchronisation after importing tickets
 }

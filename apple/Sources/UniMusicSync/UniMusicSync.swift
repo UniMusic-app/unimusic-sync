@@ -18,9 +18,9 @@ public class UniMusicSync {
         irohManager = try await irohFactory.irohManager(path: path)
     }
 
-    public func getOrCreateNamespace() async throws -> UNamespaceId {
-        let namespaceId = try! await irohManager.getOrCreateNamespace()
-        return namespaceId
+    public func createNamespace() async throws -> UNamespaceId {
+        let namespace = try await irohManager.createNamespace()
+        return namespace
     }
 
     public func getAuthor() async throws -> String {
@@ -57,7 +57,11 @@ public class UniMusicSync {
         return namespaceId
     }
 
-    public func listen(_ namespace: UNamespaceId) async throws {
-        try await irohManager.listen(namespace: namespace)
+    public func sync(_ namespace: UNamespaceId) async throws {
+        try await irohManager.sync(namespace: namespace)
+    }
+    
+    public func reconnect() async {
+        await irohManager.reconnect()
     }
 }
