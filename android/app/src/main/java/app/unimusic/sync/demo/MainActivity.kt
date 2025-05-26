@@ -18,21 +18,26 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
   var author = "Unknown"
+  lateinit var uniMusicSync: UniMusicSync
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
     CoroutineScope(Dispatchers.IO).launch {
-      println("CREATING IROH MANAGER...")
-      val irohManager = UniMusicSync.create(applicationContext.filesDir.path)
-      println("CREATED IROH MANAGER")
-      author = irohManager.irohManager.getAuthor()
-      print("GOT AUTHOR: ")
-
+      val tempDir = applicationContext.filesDir.resolve("iroh")
+      val uniMusicSync = UniMusicSync.create(tempDir.resolve("provider").path)
+      this@MainActivity.uniMusicSync = uniMusicSync
+      author = uniMusicSync.getAuthor()
+      uniMusicSync.shutdown()
       render()
     }
 
     render()
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    uniMusicSync.close()
   }
 
   private fun render() {

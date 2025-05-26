@@ -45,13 +45,15 @@ dependencies {
     implementation 'net.java.dev.jna:jna:5.15.0@aar'
 
     testImplementation libs.junit
+    testImplementation libs.kotlinx.coroutines.test
 
     androidTestImplementation libs.androidx.test.junit
+    androidTestImplementation libs.kotlinx.coroutines.test
     androidTestImplementation libs.androidx.test.espresso
 }
 
 cargoNdk {
-    module  = "../rust" // Directory containing Cargo.toml
+    module = "../rust" // Directory containing Cargo.toml
     librariesNames = ["libunimusic_sync.so"]
     extraCargoBuildArguments = ["-p", "unimusic-sync"]
 }

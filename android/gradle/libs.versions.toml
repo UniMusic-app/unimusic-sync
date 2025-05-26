@@ -5,6 +5,7 @@ cargo-ndk = "0.3.4"
 ktfmt = "0.22.0"
 androidx-lifecycle = "2.9.0"
 ktx = "1.16.0"
+kotlinx-coroutines = "1.10.2"
 androidx-appcompat = "1.7.0"
 androidx-activity-compose = "1.10.1"
 compose = "2025.05.00"
@@ -34,6 +35,7 @@ androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref
 androidx-test-espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "junitCompose" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
