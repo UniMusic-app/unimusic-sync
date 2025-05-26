@@ -606,6 +606,8 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func getKnownNodes() async  -> [UNodeId]
     
+    func getNodeId() async  -> UNodeId
+    
     func `import`(ticket: UDocTicket) async throws  -> UNamespaceId
     
     func readFile(namespace: UNamespaceId, path: String) async throws  -> Data
@@ -722,6 +724,24 @@ open func getKnownNodes()async  -> [UNodeId]  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeUNodeId.lift,
+            errorHandler: nil
+            
+        )
+}
+    
+open func getNodeId()async  -> UNodeId  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_get_node_id(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeUNodeId_lift,
             errorHandler: nil
             
         )
@@ -1383,6 +1403,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_known_nodes() != 24320) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_node_id() != 38133) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_import() != 64620) {

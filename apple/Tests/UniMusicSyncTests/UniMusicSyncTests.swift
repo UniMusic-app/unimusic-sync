@@ -2,7 +2,7 @@ import XCTest
 
 @testable import UniMusicSync
 
-let MODIFIED_FILE = ( path: "dog_breeds.txt", contents: Data("German Shephard, Husky, Pomeranian".utf8))
+let MODIFIED_FILE = (path: "dog_breeds.txt", contents: Data("German Shephard, Husky, Pomeranian".utf8))
 let TEST_FILES = [
     "dog_breeds.txt": Data("American Eskimo Dog, Husky, Cocker Spaniel, Pomeranian".utf8),
     "bing chilling.txt": Data("""
@@ -42,9 +42,6 @@ let TEST_FILES = [
 
 final class UniMusicSyncTests: XCTestCase {
     var tempDirectoryURL: URL!
-    // We store provider here to prevent deinitialization
-    var provider: UniMusicSync?
-
     override func setUp() {
         super.setUp()
 
@@ -74,11 +71,7 @@ final class UniMusicSyncTests: XCTestCase {
             XCTAssertEqual(file, contents)
         }
 
-        func testReceiver(dir: String, author _: UAuthorId, namespace: UNamespaceId, fileHashes: [UHash], docTicket: UDocTicket) async throws {}
-
         let provider = try await mockClient(dir: "provider")
-        self.provider = provider
-
         print("[provider]: create namespace")
         let namespace = try await provider.createNamespace()
 
@@ -93,10 +86,11 @@ final class UniMusicSyncTests: XCTestCase {
             fileHashes.append(fileHash)
         }
 
-        print("[provider]: share ticket]")
+        print("[provider]: share ticket")
         let docTicket = try await provider.share(namespace)
 
         // MARK: Test 5 concurrent connections
+
         try await withThrowingTaskGroup { group in
             for try i in 0 ..< 5 {
                 group.addTask {
@@ -112,27 +106,26 @@ final class UniMusicSyncTests: XCTestCase {
                     }
 
                     print("[receiver \(i)]: make sure imported namespace is equal to the provider one")
-                    
                     let importedNamespace = try await receiver.import(docTicket)
                     XCTAssertEqual(importedNamespace, namespace)
 
                     print("[receiver \(i)]: make sure files get properly imported")
-                    for (i, (path, contents)) in TEST_FILES.enumerated() {
+                    for (j, (path, contents)) in TEST_FILES.enumerated() {
                         print("[receiver \(i)]: make sure \(path) gets properly imported")
-                        try await compareFileContents(receiver, fileHash: fileHashes[i], contents: contents)
+                        try await compareFileContents(receiver, fileHash: fileHashes[j], contents: contents)
                         try await compareFileContents(receiver, namespace: namespace, path: path, contents: contents)
                     }
+
+                    print("[receiver \(i)]: shutdown")
+                    try await receiver.shutdown()
                 }
             }
         }
 
-        // Wait for databases to close
-        try await Task.sleep(nanoseconds: 5 * NSEC_PER_SEC)
-
         print("[provider]: modify \(MODIFIED_FILE.path)")
         let fileHash = try await provider.writeFile(namespace, MODIFIED_FILE.path, MODIFIED_FILE.contents)
         try await compareFileContents(provider, fileHash: fileHash, contents: MODIFIED_FILE.contents)
-        
+
         // MARK: Make sure nodes properly reconnect and sync
 
         try await withThrowingTaskGroup { group in
@@ -140,23 +133,29 @@ final class UniMusicSyncTests: XCTestCase {
                 group.addTask {
                     print("[receiver \(i)]: recreate")
                     let receiver = try await mockClient(dir: "receiver_\(i)")
-                    
+
                     print("[receiver \(i)]: make sure all files are still there")
-                    for (i, (path, contents)) in TEST_FILES.enumerated() {
-                        try await compareFileContents(receiver, fileHash: fileHashes[i], contents: contents)
+                    for (j, (path, contents)) in TEST_FILES.enumerated() {
+                        try await compareFileContents(receiver, fileHash: fileHashes[j], contents: contents)
                         try await compareFileContents(receiver, namespace: namespace, path: path, contents: contents)
                     }
-                    
+
                     print("[receiver \(i)]: reconnect")
                     await receiver.reconnect()
-                    
+
                     print("[receiver \(i)]: sync")
                     try await receiver.sync(namespace)
-                    
+
                     print("[receiver \(i)]: make sure file got properly synced")
                     try await compareFileContents(receiver, fileHash: fileHash, contents: MODIFIED_FILE.contents)
+
+                    print("[receiver \(i)]: shutdown")
+                    try await receiver.shutdown()
                 }
             }
         }
+
+        print("[provider]: shutdown")
+        try await provider.shutdown()
     }
 }
