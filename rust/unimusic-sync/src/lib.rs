@@ -64,15 +64,13 @@ impl IrohFactory {
             .bind()
             .await?;
 
-        let builder = Router::builder(endpoint.clone());
-
         let blobs = Blobs::persistent(&path).await?.build(&endpoint);
         let gossip = Gossip::builder().spawn(endpoint.clone()).await?;
         let docs = Docs::persistent(path.clone())
             .spawn(&blobs, &gossip)
             .await?;
 
-        let router = builder
+        let router = Router::builder(endpoint.clone())
             .accept(BLOBS_ALPN, blobs.clone())
             .accept(GOSSIP_ALPN, gossip.clone())
             .accept(DOCS_ALPN, docs.clone())
@@ -178,6 +176,11 @@ impl IrohManager {
         let authors = docs_client.authors();
         let author = authors.default().await?;
         Ok(author.into())
+    }
+
+    pub async fn get_node_id(&self) -> UNodeId {
+        let node_id = self.router.endpoint().node_id();
+        node_id.into()
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -508,9 +511,9 @@ mod test {
                 tokio::time::sleep(Duration::from_secs(5)).await;
 
                 info!("[receiver {i}]: make sure files are got properly imported");
-                for (i, (path, contents)) in TEST_FILES.into_iter().enumerate() {
+                for (j, (path, contents)) in TEST_FILES.into_iter().enumerate() {
                     info!("[receiver {i}]: make sure {path} gets properly imported");
-                    assert_eq!(&receiver.read_file_hash(file_hashes[i]).await?, contents);
+                    assert_eq!(&receiver.read_file_hash(file_hashes[j]).await?, contents);
                     assert_eq!(&receiver.read_file(namespace, path).await?, contents);
                 }
 
@@ -548,8 +551,8 @@ mod test {
                 let receiver = mock_client(receiver_path).await?;
 
                 info!("[receiver {i}]: make sure files are still there");
-                for (i, (path, contents)) in TEST_FILES.iter().enumerate() {
-                    assert_eq!(&receiver.read_file_hash(file_hashes[i]).await?, contents);
+                for (j, (path, contents)) in TEST_FILES.iter().enumerate() {
+                    assert_eq!(&receiver.read_file_hash(file_hashes[j]).await?, contents);
                     assert_eq!(&receiver.read_file(namespace, path).await?, contents);
                 }
 
