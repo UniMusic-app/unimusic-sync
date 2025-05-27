@@ -145,6 +145,8 @@ final class UniMusicSyncTests: XCTestCase {
 
                     print("[receiver \(i)]: sync")
                     try await receiver.sync(namespace)
+                    print("[receiver \(i)]: synced, waiting 5s to propagate")
+                    try await Task.sleep(nanoseconds: 5 * NSEC_PER_SEC)
 
                     print("[receiver \(i)]: make sure file got properly synced")
                     try await compareFileContents(receiver, fileHash: fileHash, contents: MODIFIED_FILE.contents)
