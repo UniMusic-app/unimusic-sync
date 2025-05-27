@@ -7,13 +7,7 @@ import uniffi.unimusic_sync.UHash
 import uniffi.unimusic_sync.UNamespaceId
 import uniffi.unimusic_sync.UNodeId
 
-class UniMusicSync {
-  private val irohManager: IrohManager
-
-  constructor(irohManager: IrohManager) {
-    this.irohManager = irohManager
-  }
-
+class UniMusicSync(private val irohManager: IrohManager) {
   companion object {
     suspend fun create(path: String): UniMusicSync {
       val irohFactory = IrohFactory()

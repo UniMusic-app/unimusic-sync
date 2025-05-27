@@ -128,6 +128,7 @@ pub struct IrohManager {
 
 #[uniffi::export(async_runtime = "tokio")]
 impl IrohManager {
+    // TODO: Add channel/lock which notifies storage to stop locking so shutdown doesn't get starved
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn shutdown(&self) -> Result<()> {
         let node_storage = self.node_storage.read().await;

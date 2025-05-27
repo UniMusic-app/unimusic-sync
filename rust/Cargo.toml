@@ -10,4 +10,3 @@ uniffi = "0.29.2"
 lto = "fat"
 opt-level = "z"
 codegen-units = 1
-strip = "symbols"
