@@ -2,7 +2,7 @@ mod errors;
 use errors::{Result, SharedError};
 
 mod types;
-use types::{UAuthorId, UDocTicket, UHash, UNamespaceId, UNodeId};
+use types::{UAuthorId, UDocTicket, UEntry, UHash, UNamespaceId, UNodeId};
 
 mod node_storage;
 use node_storage::NodeStorage;
@@ -17,7 +17,11 @@ use std::{
 };
 
 use iroh::{Endpoint, NodeAddr, protocol::Router};
-use iroh_blobs::{ALPN as BLOBS_ALPN, net_protocol::Blobs};
+use iroh_blobs::{
+    ALPN as BLOBS_ALPN,
+    net_protocol::Blobs,
+    store::{ExportFormat, ExportMode},
+};
 use iroh_docs::{
     ALPN as DOCS_ALPN,
     engine::LiveEvent,
@@ -51,7 +55,7 @@ impl IrohFactory {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
-    pub async fn iroh_manager(&self, path: String) -> Result<IrohManager> {
+    pub async fn iroh_manager(&self, path: &str) -> Result<IrohManager> {
         let path = PathBuf::from(path);
 
         // Load or generate secret key to preserve the NodeId
@@ -179,6 +183,7 @@ impl IrohManager {
         Ok(author.into())
     }
 
+    #[uniffi::method(async_runtime = "tokio")]
     pub async fn get_node_id(&self) -> UNodeId {
         let node_id = self.router.endpoint().node_id();
         node_id.into()
@@ -189,6 +194,29 @@ impl IrohManager {
         let docs_client = self.docs.client();
         let doc = docs_client.create().await?;
         Ok(doc.id().into())
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn get_files(&self, namespace: UNamespaceId) -> Result<Vec<Arc<UEntry>>> {
+        let docs_client = self.docs.client();
+
+        let replica = docs_client
+            .open(namespace.into())
+            .await?
+            .ok_or(SharedError::ReplicaMissing(namespace))?;
+
+        let mut entries = replica.get_many(Query::all()).await?;
+        let mut files = Vec::new();
+        while let Some(file) = entries.try_next().await? {
+            files.push(Arc::new(file.into()))
+        }
+
+        Ok(files)
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<UHash> {
+        self.write_file(namespace, path, Vec::new()).await
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -238,6 +266,50 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
+    pub async fn export(
+        &self,
+        namespace: UNamespaceId,
+        path: &str,
+        destination: &str,
+    ) -> Result<()> {
+        let docs_client = self.docs.client();
+
+        let replica = docs_client
+            .open(namespace.into())
+            .await?
+            .ok_or(SharedError::ReplicaMissing(namespace))?;
+
+        let entry = replica
+            .get_one(Query::key_exact(&path))
+            .await?
+            .ok_or_else(|| SharedError::EntryMissing(namespace, path.to_string()))?;
+
+        self.export_hash(entry.content_hash().into(), destination)
+            .await?;
+
+        Ok(())
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn export_hash(&self, hash: UHash, destination: &str) -> Result<()> {
+        let blobs_client = self.blobs.client();
+
+        let x = blobs_client
+            .export(
+                hash.into(),
+                PathBuf::from(destination),
+                ExportFormat::Blob,
+                ExportMode::Copy,
+            )
+            .await?
+            .await?;
+
+        println!("OUTCOME: {x:?}");
+
+        Ok(())
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
     pub async fn share(&self, namespace: UNamespaceId) -> Result<UDocTicket> {
         let docs_client = self.docs.client();
         let replica = docs_client
@@ -260,7 +332,7 @@ impl IrohManager {
             .await?
             .ok_or(SharedError::ReplicaMissing(namespace))?;
 
-        let node_addrs = {
+        let node_addrs: Vec<NodeAddr> = {
             let node_storage = self.node_storage.read().await;
             node_storage
                 .nodes
@@ -274,6 +346,10 @@ impl IrohManager {
                 })
                 .collect()
         };
+
+        if node_addrs.is_empty() {
+            return Ok(());
+        }
 
         replica.start_sync(node_addrs).await?;
 
@@ -446,7 +522,7 @@ mod test {
 
     async fn mock_client(dir: PathBuf) -> Result<IrohManager> {
         let iroh_manager = IrohFactory::new()
-            .iroh_manager(dir.to_string_lossy().into_owned())
+            .iroh_manager(&dir.to_string_lossy())
             .await?;
         Ok(iroh_manager)
     }

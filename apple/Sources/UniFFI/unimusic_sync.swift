@@ -400,6 +400,46 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -602,7 +642,15 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func createNamespace() async throws  -> UNamespaceId
     
+    func deleteFile(namespace: UNamespaceId, path: String) async throws  -> UHash
+    
+    func export(namespace: UNamespaceId, path: String, destination: String) async throws 
+    
+    func exportHash(hash: UHash, destination: String) async throws 
+    
     func getAuthor() async throws  -> UAuthorId
+    
+    func getFiles(namespace: UNamespaceId) async throws  -> [UEntry]
     
     func getKnownNodes() async  -> [UNodeId]
     
@@ -694,6 +742,57 @@ open func createNamespace()async throws  -> UNamespaceId  {
         )
 }
     
+open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UHash  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_delete_file(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace),FfiConverterString.lower(path)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeUHash_lift,
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func export(namespace: UNamespaceId, path: String, destination: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_export(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace),FfiConverterString.lower(path),FfiConverterString.lower(destination)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func exportHash(hash: UHash, destination: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_export_hash(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUHash_lower(hash),FfiConverterString.lower(destination)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
 open func getAuthor()async throws  -> UAuthorId  {
     return
         try  await uniffiRustCallAsync(
@@ -707,6 +806,23 @@ open func getAuthor()async throws  -> UAuthorId  {
             completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
             freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeUAuthorId_lift,
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func getFiles(namespace: UNamespaceId)async throws  -> [UEntry]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_get_files(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeUEntry.lift,
             errorHandler: FfiConverterTypeSharedError_lift
         )
 }
@@ -940,6 +1056,182 @@ public func FfiConverterTypeIrohManager_lower(_ value: IrohManager) -> UnsafeMut
 
 
 
+
+
+public protocol UEntryProtocol: AnyObject, Sendable {
+    
+    func author()  -> UAuthorId
+    
+    func contentHash()  -> UHash
+    
+    func contentLen()  -> UInt64
+    
+    func isEmpty()  -> Bool
+    
+    func key()  -> String
+    
+    func namespace()  -> UNamespaceId
+    
+    func timestamp()  -> UInt64
+    
+}
+open class UEntry: UEntryProtocol, @unchecked Sendable {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_unimusic_sync_fn_clone_uentry(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_unimusic_sync_fn_free_uentry(pointer, $0) }
+    }
+
+    
+
+    
+open func author() -> UAuthorId  {
+    return try!  FfiConverterTypeUAuthorId_lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_author(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func contentHash() -> UHash  {
+    return try!  FfiConverterTypeUHash_lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_content_hash(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func contentLen() -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_content_len(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func isEmpty() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_is_empty(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func key() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_key(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func namespace() -> UNamespaceId  {
+    return try!  FfiConverterTypeUNamespaceId_lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_namespace(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func timestamp() -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_unimusic_sync_fn_method_uentry_timestamp(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUEntry: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = UEntry
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> UEntry {
+        return UEntry(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: UEntry) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UEntry {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: UEntry, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUEntry_lift(_ pointer: UnsafeMutableRawPointer) throws -> UEntry {
+    return try FfiConverterTypeUEntry.lift(pointer)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUEntry_lower(_ value: UEntry) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeUEntry.lower(value)
+}
+
+
+
+
 public enum SharedError: Swift.Error {
 
     
@@ -1086,6 +1378,31 @@ extension SharedError: Foundation.LocalizedError {
 
 
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [UEntry]
+
+    public static func write(_ value: [UEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1399,7 +1716,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohmanager_create_namespace() != 50579) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_file() != 42809) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_export() != 10794) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_export_hash() != 55957) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_author() != 10682) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_get_files() != 6669) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_get_known_nodes() != 24320) {
@@ -1430,6 +1759,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_write_file() != 6891) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_author() != 1716) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_content_hash() != 33445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_content_len() != 49486) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_is_empty() != 50697) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_key() != 9161) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_namespace() != 4424) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_uentry_timestamp() != 49787) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_constructor_irohfactory_new() != 4899) {

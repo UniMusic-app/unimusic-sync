@@ -1,7 +1,7 @@
 // Iroh types passable via UniFFI
 use iroh::{NodeId, node_info::NodeData};
 use iroh_blobs::Hash;
-use iroh_docs::{AuthorId, DocTicket, NamespaceId};
+use iroh_docs::{AuthorId, DocTicket, Entry, NamespaceId};
 use serde::{Deserialize, Serialize};
 
 use std::fmt::Display;
@@ -74,3 +74,45 @@ uniffiable_wrapper!(Hash, UHash);
 #[derive(Debug, Clone)]
 pub struct UDocTicket(DocTicket);
 uniffiable_wrapper!(DocTicket, UDocTicket);
+
+#[derive(Debug, uniffi::Object)]
+pub struct UEntry(Entry);
+
+impl From<Entry> for UEntry {
+    fn from(value: Entry) -> Self {
+        Self(value)
+    }
+}
+
+#[uniffi::export]
+impl UEntry {
+    pub fn key(&self) -> String {
+        let key = self.0.key();
+        let path = std::str::from_utf8(key).expect("Key to be UTF-8 encoded path");
+        path.to_string()
+    }
+
+    pub fn content_hash(&self) -> UHash {
+        self.0.content_hash().into()
+    }
+
+    pub fn content_len(&self) -> u64 {
+        self.0.content_len()
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.0.timestamp()
+    }
+
+    pub fn namespace(&self) -> UNamespaceId {
+        self.0.namespace().into()
+    }
+
+    pub fn author(&self) -> UAuthorId {
+        self.0.author().into()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}

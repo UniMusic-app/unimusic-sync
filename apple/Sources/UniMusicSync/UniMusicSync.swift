@@ -32,6 +32,16 @@ public class UniMusicSync {
         return nodeId
     }
 
+    public func getKnownNodes() async -> [UNodeId] {
+        let knownNodes = await irohManager.getKnownNodes()
+        return knownNodes
+    }
+
+    public func getFiles(_ namespace: UNamespaceId) async throws -> [UEntry] {
+        let files = try await irohManager.getFiles(namespace: namespace)
+        return files
+    }
+
     public func writeFile(_ namespace: UNamespaceId, _ path: String, _ data: Data) async throws -> UHash {
         let hash = try await irohManager.writeFile(
             namespace: namespace,
@@ -49,6 +59,14 @@ public class UniMusicSync {
     public func readFileHash(_ hash: UHash) async throws -> Data {
         let data = try await irohManager.readFileHash(hash: hash)
         return data
+    }
+
+    public func export(_ namespace: UNamespaceId, _ path: String, _ destination: String) async throws {
+        try await irohManager.export(namespace: namespace, path: path, destination: destination)
+    }
+
+    public func exportHash(_ hash: UHash, _ destination: String) async throws {
+        try await irohManager.exportHash(hash: hash, destination: destination)
     }
 
     public func share(_ namespace: String) async throws -> UDocTicket {
