@@ -65,6 +65,7 @@ impl IrohFactory {
             .secret_key(secret_key)
             .discovery_n0()
             .discovery_local_network()
+            .discovery_dht()
             .bind()
             .await?;
 

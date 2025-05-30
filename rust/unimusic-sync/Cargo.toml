@@ -21,7 +21,10 @@ thiserror = "^2.0.12"
 tokio = "^1.45.0"
 tokio-stream = "^0.1.17"
 
-iroh = { version = "^0.35.0", features = ["discovery-local-network"] }
+iroh = { version = "^0.35.0", features = [
+    "discovery-local-network",
+    "discovery-pkarr-dht",
+] }
 iroh-blobs = { version = "^0.35.0" }
 iroh-docs = { version = "^0.35.0", features = ["rpc"] }
 iroh-gossip = { version = "^0.35.0" }
