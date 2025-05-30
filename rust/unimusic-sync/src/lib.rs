@@ -16,14 +16,14 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use iroh::{Endpoint, NodeAddr, protocol::Router};
+use iroh::{Endpoint, NodeAddr, node_info::NodeData, protocol::Router};
 use iroh_blobs::{
     ALPN as BLOBS_ALPN,
     net_protocol::Blobs,
     store::{ExportFormat, ExportMode},
 };
 use iroh_docs::{
-    ALPN as DOCS_ALPN,
+    ALPN as DOCS_ALPN, DocTicket,
     engine::LiveEvent,
     protocol::Docs,
     rpc::{AddrInfoOptions, client::docs::ShareMode},
@@ -392,13 +392,24 @@ impl IrohManager {
 
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn import(&self, ticket: UDocTicket) -> Result<UNamespaceId> {
-        let ticket = ticket.into();
+        let ticket: DocTicket = ticket.into();
 
         let docs_client = self.docs.client();
+
+        {
+            info!("[ticket] upserting nodes from ticket {ticket}");
+            let mut node_storage = self.node_storage.write().await;
+            for node in &ticket.nodes {
+                let node_data =
+                    NodeData::new(node.relay_url.clone(), node.direct_addresses.clone());
+                node_storage.upsert_node(node.node_id, Cow::Owned(node_data));
+            }
+        }
 
         info!("[ticket] importing {ticket}");
         let (replica, mut event_stream) = docs_client.import_and_subscribe(ticket).await?;
         let namespace = replica.id();
+
         info!("[ticket] syncing namespace {namespace}");
         while let Some(event) = event_stream.try_next().await? {
             match event {
@@ -432,7 +443,9 @@ impl IrohManager {
                 LiveEvent::NeighborDown(key) => {
                     info!("[namespace {namespace}] {key} disconnected");
                 }
-                LiveEvent::NeighborUp(key) => info!("[namespace {namespace}] {key} connected"),
+                LiveEvent::NeighborUp(key) => {
+                    info!("[namespace {namespace}] {key} connected");
+                }
             }
         }
         info!("[ticket] imported namespace {namespace}");
