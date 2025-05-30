@@ -613,6 +613,11 @@ mod test {
             provider.read_file(namespace, MODIFIED_FILE.0).await?,
             MODIFIED_FILE.1
         );
+        info!(
+            "[provider]: modified {}, waiting 5 seconds to propagate...",
+            MODIFIED_FILE.0
+        );
+        tokio::time::sleep(Duration::from_secs(5)).await;
 
         let mut set = JoinSet::new();
         for i in 0..5 {
@@ -652,8 +657,11 @@ mod test {
                         error!("[receiver {i}]: failed sync 15 times, giving up");
                         break;
                     }
+
                     warn!("[receiver {i}]: sync failed, retrying in 2s...");
                     tokio::time::sleep(Duration::from_secs(2)).await;
+
+                    retries += 1
                 }
 
                 info!("[receiver {i}]: synced, wait 5 seconds for it to propagate...");
