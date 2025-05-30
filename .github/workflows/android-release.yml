@@ -1,8 +1,11 @@
 name: Android Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["iOS Release"]
+    types:
+      - completed
 
 jobs:
   release:

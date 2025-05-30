@@ -1,6 +1,7 @@
 name: iOS Release
 
 on:
+  workflow_dispatch:
   push:
     tags: ["*"]
 
@@ -39,5 +40,6 @@ jobs:
       - name: 📤 Upload Release
         uses: softprops/action-gh-release@v2
         with:
+          name: UniMusicSync ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           files: rust/target/ios/libunimusic_sync-rs.xcframework.zip
