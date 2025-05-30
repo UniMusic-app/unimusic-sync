@@ -1,8 +1,8 @@
 name: iOS Release
 
 on:
-  release:
-    types: [created]
+  push:
+    tags: ["*"]
 
 jobs:
   release:
@@ -29,15 +29,15 @@ jobs:
       - name: Move tag to current position (so Swift PM downloads correct package)
         run: |
           # Remove current tag
-          git tag -d ${{ github.event.release.tag_name }}
-          git push --delete origin ${{ github.event.release.tag_name }}
+          git tag -d ${{ github.ref_name }}
+          git push --delete origin ${{ github.ref_name }}
 
           # Create new one
-          git tag -a ${{ github.event.release.tag_name }} -m "update swift package checksum"
+          git tag -a ${{ github.ref_name }} -m "update swift package checksum"
           git push origin --tags
 
       - name: 📤 Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ github.ref_name }}
           files: rust/target/ios/libunimusic_sync-rs.xcframework.zip
