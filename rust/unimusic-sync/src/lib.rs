@@ -293,8 +293,7 @@ impl IrohManager {
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn export_hash(&self, hash: UHash, destination: &str) -> Result<()> {
         let blobs_client = self.blobs.client();
-
-        let x = blobs_client
+        blobs_client
             .export(
                 hash.into(),
                 PathBuf::from(destination),
@@ -303,9 +302,6 @@ impl IrohManager {
             )
             .await?
             .await?;
-
-        println!("OUTCOME: {x:?}");
-
         Ok(())
     }
 

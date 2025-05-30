@@ -3,6 +3,7 @@ package app.unimusic.sync
 import uniffi.unimusic_sync.IrohFactory
 import uniffi.unimusic_sync.IrohManager
 import uniffi.unimusic_sync.UDocTicket
+import uniffi.unimusic_sync.UEntry
 import uniffi.unimusic_sync.UHash
 import uniffi.unimusic_sync.UNamespaceId
 import uniffi.unimusic_sync.UNodeId
@@ -54,6 +55,11 @@ class UniMusicSync(private val irohManager: IrohManager) {
     return knownNodes
   }
 
+  suspend fun getFiles(namespace: UNamespaceId): List<UEntry> {
+    val files = handleException { irohManager.getFiles(namespace) }
+    return files
+  }
+
   suspend fun writeFile(namespace: UNamespaceId, path: String, data: ByteArray): UHash {
     val hash = handleException { irohManager.writeFile(namespace, path, data) }
     return hash
@@ -67,6 +73,14 @@ class UniMusicSync(private val irohManager: IrohManager) {
   suspend fun readFileHash(hash: UHash): ByteArray {
     val data = handleException { irohManager.readFileHash(hash) }
     return data
+  }
+
+  suspend fun export(namespace: UNamespaceId, path: String, destination: String) {
+    handleException { irohManager.export(namespace, path, destination) }
+  }
+
+  suspend fun exportHash(hash: UHash, destination: String) {
+    handleException { irohManager.exportHash(hash, destination) }
   }
 
   suspend fun share(namespace: UNamespaceId): UDocTicket {
