@@ -198,6 +198,13 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
+    pub async fn delete_namespace(&self, namespace: UNamespaceId) -> Result<()> {
+        let docs_client = self.docs.client();
+        docs_client.drop_doc(namespace.into()).await?;
+        Ok(())
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
     pub async fn get_files(&self, namespace: UNamespaceId) -> Result<Vec<Arc<UEntry>>> {
         let docs_client = self.docs.client();
 
@@ -216,8 +223,19 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
-    pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<UHash> {
-        self.write_file(namespace, path, Vec::new()).await
+    pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<u32> {
+        let docs_client = self.docs.client();
+        let replica = docs_client
+            .open(namespace.into())
+            .await?
+            .ok_or(SharedError::ReplicaMissing(namespace))?;
+
+        let authors = docs_client.authors();
+        let author = authors.default().await?;
+
+        let deleted_entries = replica.del(author, path).await? as u32;
+
+        Ok(deleted_entries)
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -252,7 +270,7 @@ impl IrohManager {
             .ok_or(SharedError::ReplicaMissing(namespace))?;
 
         let entry = replica
-            .get_one(Query::key_exact(&path))
+            .get_one(Query::key_exact(path))
             .await?
             .ok_or_else(|| SharedError::EntryMissing(namespace, path.to_string()))?;
 
@@ -281,7 +299,7 @@ impl IrohManager {
             .ok_or(SharedError::ReplicaMissing(namespace))?;
 
         let entry = replica
-            .get_one(Query::key_exact(&path))
+            .get_one(Query::key_exact(path))
             .await?
             .ok_or_else(|| SharedError::EntryMissing(namespace, path.to_string()))?;
 

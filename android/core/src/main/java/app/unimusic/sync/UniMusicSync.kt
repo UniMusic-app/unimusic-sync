@@ -8,6 +8,7 @@ import uniffi.unimusic_sync.UHash
 import uniffi.unimusic_sync.UNamespaceId
 import uniffi.unimusic_sync.UNodeId
 
+@Suppress("unused")
 class UniMusicSync(private val irohManager: IrohManager) {
   companion object {
     suspend fun create(path: String): UniMusicSync {
@@ -40,6 +41,10 @@ class UniMusicSync(private val irohManager: IrohManager) {
     return namespace
   }
 
+  suspend fun deleteNamespace(namespace: UNamespaceId) {
+    handleException { irohManager.deleteNamespace(namespace) }
+  }
+
   suspend fun getAuthor(): String {
     val author = handleException { irohManager.getAuthor() }
     return author
@@ -63,6 +68,11 @@ class UniMusicSync(private val irohManager: IrohManager) {
   suspend fun writeFile(namespace: UNamespaceId, path: String, data: ByteArray): UHash {
     val hash = handleException { irohManager.writeFile(namespace, path, data) }
     return hash
+  }
+
+  suspend fun deleteFile(namespace: UNamespaceId, path: String): UInt {
+    val deletedFiles = handleException { irohManager.deleteFile(namespace, path) }
+    return deletedFiles
   }
 
   suspend fun readFile(namespace: UNamespaceId, path: String): ByteArray {

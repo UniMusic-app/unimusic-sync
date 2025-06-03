@@ -400,6 +400,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -642,7 +658,9 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func createNamespace() async throws  -> UNamespaceId
     
-    func deleteFile(namespace: UNamespaceId, path: String) async throws  -> UHash
+    func deleteFile(namespace: UNamespaceId, path: String) async throws  -> UInt32
+    
+    func deleteNamespace(namespace: UNamespaceId) async throws 
     
     func export(namespace: UNamespaceId, path: String, destination: String) async throws 
     
@@ -742,7 +760,7 @@ open func createNamespace()async throws  -> UNamespaceId  {
         )
 }
     
-open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UHash  {
+open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UInt32  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
@@ -751,10 +769,27 @@ open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UHas
                     FfiConverterTypeUNamespaceId_lower(namespace),FfiConverterString.lower(path)
                 )
             },
-            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
-            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
-            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeUHash_lift,
+            pollFunc: ffi_unimusic_sync_rust_future_poll_u32,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_u32,
+            freeFunc: ffi_unimusic_sync_rust_future_free_u32,
+            liftFunc: FfiConverterUInt32.lift,
+            errorHandler: FfiConverterTypeSharedError_lift
+        )
+}
+    
+open func deleteNamespace(namespace: UNamespaceId)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_unimusic_sync_fn_method_irohmanager_delete_namespace(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUNamespaceId_lower(namespace)
+                )
+            },
+            pollFunc: ffi_unimusic_sync_rust_future_poll_void,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_void,
+            freeFunc: ffi_unimusic_sync_rust_future_free_void,
+            liftFunc: { $0 },
             errorHandler: FfiConverterTypeSharedError_lift
         )
 }
@@ -1716,7 +1751,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohmanager_create_namespace() != 50579) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_file() != 42809) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_file() != 39559) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_namespace() != 30723) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_export() != 10794) {

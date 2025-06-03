@@ -22,6 +22,10 @@ public class UniMusicSync {
         return namespace
     }
 
+    public func deleteNamespace(namespace: UNamespaceId) async throws {
+        try await irohManager.deleteNamespace(namespace: namespace)
+    }
+
     public func getAuthor() async throws -> String {
         let author = try await irohManager.getAuthor()
         return author
@@ -49,6 +53,11 @@ public class UniMusicSync {
             data: data
         )
         return hash
+    }
+
+    public func deleteFile(_ namespace: UNamespaceId, _ path: String) async throws -> UInt32 {
+        let deletedFiles = try await irohManager.deleteFile(namespace: namespace, path: path)
+        return deletedFiles
     }
 
     public func readFile(_ namespace: UNamespaceId, _ path: String) async throws -> Data {
