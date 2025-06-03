@@ -18,7 +18,7 @@ use std::{
 
 use iroh::{Endpoint, NodeAddr, node_info::NodeData, protocol::Router};
 use iroh_blobs::{
-    ALPN as BLOBS_ALPN,
+    ALPN as BLOBS_ALPN, Hash,
     net_protocol::Blobs,
     store::{ExportFormat, ExportMode},
 };
@@ -120,6 +120,8 @@ impl IrohFactory {
 
 type PersistentStore = iroh_blobs::store::fs::Store;
 
+const TOMBSTONE: &[u8] = b"\00";
+
 #[derive(Debug, uniffi::Object)]
 pub struct IrohManager {
     pub path: PathBuf,
@@ -216,7 +218,12 @@ impl IrohManager {
         let mut entries = replica.get_many(Query::single_latest_per_key()).await?;
 
         let mut files = Vec::new();
+        let tombstone_hash = Hash::new(TOMBSTONE);
         while let Some(file) = entries.try_next().await? {
+            if file.content_hash() == tombstone_hash {
+                continue;
+            }
+
             files.push(Arc::new(file.into()))
         }
 
@@ -224,19 +231,9 @@ impl IrohManager {
     }
 
     #[uniffi::method(async_runtime = "tokio")]
-    pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<u32> {
-        let docs_client = self.docs.client();
-        let replica = docs_client
-            .open(namespace.into())
-            .await?
-            .ok_or(SharedError::ReplicaMissing(namespace))?;
-
-        let authors = docs_client.authors();
-        let author = authors.default().await?;
-
-        let deleted_entries = replica.del(author, path).await? as u32;
-
-        Ok(deleted_entries)
+    pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<UHash> {
+        let tombstone_hash = self.write_file(namespace, path, TOMBSTONE.to_vec()).await;
+        return tombstone_hash;
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -275,7 +272,14 @@ impl IrohManager {
             .await?
             .ok_or_else(|| SharedError::EntryMissing(namespace, path.to_string()))?;
 
-        self.read_file_hash(entry.content_hash().into()).await
+        let content_hash = entry.content_hash();
+
+        let tombstone_hash = Hash::new(TOMBSTONE);
+        if content_hash == tombstone_hash {
+            return Err(SharedError::EntryTombstoned(namespace, path.to_string()));
+        }
+
+        self.read_file_hash(content_hash.into()).await
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -475,6 +479,8 @@ impl IrohManager {
 
 #[cfg(test)]
 mod test {
+    use crate::errors::SharedError;
+
     use super::{IrohFactory, IrohManager};
     use log::{error, info, warn};
     use std::{
@@ -488,14 +494,16 @@ mod test {
     type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
 
     static MODIFIED_FILE: (&str, &[u8]) = (
-        "dog_breeds.txt",
+        TEST_FILES[0].0,
         "German Shephard, Husky, Pomeranian".as_bytes(),
     );
-    static TEST_FILES: [(&str, &[u8]); 2] = [
+    static DELETED_FILE: &str = TEST_FILES[1].0;
+    static TEST_FILES: [(&str, &[u8]); 3] = [
         (
             "dog_breeds.txt",
             "American Eskimo Dog, Husky, Cocker Spaniel, Pomeranian".as_bytes(),
         ),
+        ("i_will_disappear.txt", "i am a ghost".as_bytes()),
         (
             "bing chilling.txt",
             r#"現在我有冰淇淋
@@ -535,8 +543,12 @@ mod test {
 
     struct TempDir(PathBuf);
     impl TempDir {
-        pub fn new<P: AsRef<Path>>(path: P) -> Self {
-            Self(std::env::temp_dir().join(path))
+        pub fn new() -> Self {
+            let sys_time = std::time::SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            Self(std::env::temp_dir().join(sys_time.to_string()))
         }
 
         pub fn subpath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
@@ -559,11 +571,7 @@ mod test {
     #[tokio::test]
     async fn test_connection() -> Result<()> {
         env_logger::init();
-
-        let sys_time = std::time::SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_secs();
-        let temp_dir = TempDir::new(sys_time.to_string());
+        let temp_dir = TempDir::new();
 
         let provider = mock_client(temp_dir.subpath("provider")).await?;
 
@@ -646,9 +654,19 @@ mod test {
             provider.read_file(namespace, MODIFIED_FILE.0).await?,
             MODIFIED_FILE.1
         );
+
+        info!("[provider]: delete {}", DELETED_FILE);
+        provider
+            .delete_file(namespace, DELETED_FILE.to_string())
+            .await?;
+        assert!(matches!(
+            provider.read_file(namespace, DELETED_FILE).await,
+            Err(SharedError::EntryTombstoned(..))
+        ));
+
         info!(
-            "[provider]: modified {}, waiting 5 seconds to propagate...",
-            MODIFIED_FILE.0
+            "[provider]: modified {} and deleted {}, waiting 5 seconds to propagate...",
+            MODIFIED_FILE.0, DELETED_FILE
         );
         tokio::time::sleep(Duration::from_secs(5)).await;
 
@@ -705,6 +723,12 @@ mod test {
                     &receiver.read_file(namespace, MODIFIED_FILE.0).await?,
                     MODIFIED_FILE.1
                 );
+
+                info!("[receiver {i}]: make sure file got properly deleted");
+                assert!(matches!(
+                    receiver.read_file(namespace, DELETED_FILE).await,
+                    Err(SharedError::EntryTombstoned(..))
+                ));
 
                 Ok(receiver)
             });

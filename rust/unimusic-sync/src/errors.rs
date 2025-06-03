@@ -3,7 +3,7 @@ use uniffi::deps::anyhow;
 
 pub type Result<T> = std::result::Result<T, SharedError>;
 
-#[derive(Debug, thiserror::Error, uniffi::Error)]
+#[derive(Debug, thiserror::Error, uniffi::Error, PartialEq, Eq)]
 pub enum SharedError {
     #[error("Iroh error: {0}")]
     Iroh(String),
@@ -18,8 +18,12 @@ pub enum SharedError {
 
     #[error("Tried to open replica, which does not exist: {0}")]
     ReplicaMissing(UNamespaceId),
-    #[error("Tried to access entry, which does not exist:\n namespace: {0}\n path: {1}")]
+    #[error("Tried to access entry, which does not exist:\nnamespace: {0}\npath: {1}")]
     EntryMissing(UNamespaceId, String),
+    #[error(
+        "Tried to access entry, which has been tombstoned (deleted):\nnamespace: {0}\npath: {1}"
+    )]
+    EntryTombstoned(UNamespaceId, String),
     #[error("Invalid namespace id: {0}")]
     InvalidNamespaceId(String),
     #[error("Sync failed: {0}")]
