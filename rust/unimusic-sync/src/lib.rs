@@ -213,7 +213,8 @@ impl IrohManager {
             .await?
             .ok_or(SharedError::ReplicaMissing(namespace))?;
 
-        let mut entries = replica.get_many(Query::all()).await?;
+        let mut entries = replica.get_many(Query::single_latest_per_key()).await?;
+
         let mut files = Vec::new();
         while let Some(file) = entries.try_next().await? {
             files.push(Arc::new(file.into()))
