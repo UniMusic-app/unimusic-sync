@@ -400,22 +400,6 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
-    typealias FfiType = UInt32
-    typealias SwiftType = UInt32
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
-        return try lift(readInt(&buf))
-    }
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(value))
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -658,7 +642,7 @@ public protocol IrohManagerProtocol: AnyObject, Sendable {
     
     func createNamespace() async throws  -> UNamespaceId
     
-    func deleteFile(namespace: UNamespaceId, path: String) async throws  -> UInt32
+    func deleteFile(namespace: UNamespaceId, path: String) async throws  -> UHash
     
     func deleteNamespace(namespace: UNamespaceId) async throws 
     
@@ -760,7 +744,7 @@ open func createNamespace()async throws  -> UNamespaceId  {
         )
 }
     
-open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UInt32  {
+open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UHash  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
@@ -769,10 +753,10 @@ open func deleteFile(namespace: UNamespaceId, path: String)async throws  -> UInt
                     FfiConverterTypeUNamespaceId_lower(namespace),FfiConverterString.lower(path)
                 )
             },
-            pollFunc: ffi_unimusic_sync_rust_future_poll_u32,
-            completeFunc: ffi_unimusic_sync_rust_future_complete_u32,
-            freeFunc: ffi_unimusic_sync_rust_future_free_u32,
-            liftFunc: FfiConverterUInt32.lift,
+            pollFunc: ffi_unimusic_sync_rust_future_poll_rust_buffer,
+            completeFunc: ffi_unimusic_sync_rust_future_complete_rust_buffer,
+            freeFunc: ffi_unimusic_sync_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeUHash_lift,
             errorHandler: FfiConverterTypeSharedError_lift
         )
 }
@@ -1283,6 +1267,8 @@ public enum SharedError: Swift.Error {
     )
     case EntryMissing(UNamespaceId,String
     )
+    case EntryTombstoned(UNamespaceId,String
+    )
     case InvalidNamespaceId(String
     )
     case SyncFailed(String
@@ -1322,10 +1308,14 @@ public struct FfiConverterTypeSharedError: FfiConverterRustBuffer {
             try FfiConverterTypeUNamespaceId.read(from: &buf), 
             try FfiConverterString.read(from: &buf)
             )
-        case 7: return .InvalidNamespaceId(
+        case 7: return .EntryTombstoned(
+            try FfiConverterTypeUNamespaceId.read(from: &buf), 
             try FfiConverterString.read(from: &buf)
             )
-        case 8: return .SyncFailed(
+        case 8: return .InvalidNamespaceId(
+            try FfiConverterString.read(from: &buf)
+            )
+        case 9: return .SyncFailed(
             try FfiConverterString.read(from: &buf)
             )
 
@@ -1371,13 +1361,19 @@ public struct FfiConverterTypeSharedError: FfiConverterRustBuffer {
             FfiConverterString.write(v2, into: &buf)
             
         
-        case let .InvalidNamespaceId(v1):
+        case let .EntryTombstoned(v1,v2):
             writeInt(&buf, Int32(7))
+            FfiConverterTypeUNamespaceId.write(v1, into: &buf)
+            FfiConverterString.write(v2, into: &buf)
+            
+        
+        case let .InvalidNamespaceId(v1):
+            writeInt(&buf, Int32(8))
             FfiConverterString.write(v1, into: &buf)
             
         
         case let .SyncFailed(v1):
-            writeInt(&buf, Int32(8))
+            writeInt(&buf, Int32(9))
             FfiConverterString.write(v1, into: &buf)
             
         }
@@ -1751,7 +1747,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_unimusic_sync_checksum_method_irohmanager_create_namespace() != 50579) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_file() != 39559) {
+    if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_file() != 42809) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_unimusic_sync_checksum_method_irohmanager_delete_namespace() != 30723) {

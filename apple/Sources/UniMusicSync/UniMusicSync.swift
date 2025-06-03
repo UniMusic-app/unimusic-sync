@@ -55,9 +55,9 @@ public class UniMusicSync {
         return hash
     }
 
-    public func deleteFile(_ namespace: UNamespaceId, _ path: String) async throws -> UInt32 {
-        let deletedFiles = try await irohManager.deleteFile(namespace: namespace, path: path)
-        return deletedFiles
+    public func deleteFile(_ namespace: UNamespaceId, _ path: String) async throws -> UHash {
+        let tombstoneHash = try await irohManager.deleteFile(namespace: namespace, path: path)
+        return tombstoneHash
     }
 
     public func readFile(_ namespace: UNamespaceId, _ path: String) async throws -> Data {
