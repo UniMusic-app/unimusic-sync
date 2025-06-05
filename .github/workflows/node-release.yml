@@ -11,22 +11,12 @@ jobs:
     permissions:
       contents: write
     outputs:
-      dryrun: ${{ steps.dryrun.outputs.dryrun }}
       publish: ${{ steps.publish.outputs.publish }}
       ref: ${{ github.ref || github.event.repository.default_branch }}
       tag: ${{ github.ref_name }}
     steps:
-      - id: dryrun
-        name: Validate Dry Run Event
-        # DRY RUN FN
-        if: true
-        shell: bash
-        run: echo dryrun=true | tee -a $GITHUB_OUTPUT
-
       - id: publish
         name: Validate Publish Event
-        # DRY RUN FN
-        if: false
         shell: bash
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
