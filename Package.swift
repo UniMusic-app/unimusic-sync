@@ -15,7 +15,7 @@ if useLocalFramework {
     )
 } else {
     let releaseTag = "0.1.13"
-    let releaseChecksum = "0cc78a92ef8775343531eb5dfc1faee23bd34053d77c23d748fa4e236c3d9acb"
+    let releaseChecksum = "517aadc8ea53c24ac8b6aac7953c349f19f46098636f9cce365c06c6847a5455"
     binaryTarget = .binaryTarget(
         name: "UniMusicSyncCoreRS",
         url:
