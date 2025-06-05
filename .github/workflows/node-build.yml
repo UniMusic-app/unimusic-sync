@@ -95,7 +95,9 @@ jobs:
         id: get-tag
         run: |
           LATEST_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $LATEST_TAG"
           echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Release
         if: ${{ inputs.github-release }}
@@ -131,7 +133,9 @@ jobs:
         id: get-tag
         run: |
           LATEST_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $LATEST_TAG"
           echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Release
         if: ${{ inputs.github-release }}
