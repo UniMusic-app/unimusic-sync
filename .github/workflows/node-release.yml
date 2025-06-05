@@ -16,7 +16,7 @@ jobs:
     outputs:
       publish: ${{ steps.publish.outputs.publish }}
       ref: ${{ github.ref || github.event.repository.default_branch }}
-      tag: ${{ github.ref_name }}
+
     steps:
       - id: publish
         name: Validate Publish Event
@@ -54,7 +54,6 @@ jobs:
     uses: ./.github/workflows/node-build.yml
     with:
       ref: ${{ needs.setup.outputs.ref }}
-      tag: ${{ needs.setup.outputs.tag }}
       github-release: ${{ !!needs.setup.outputs.publish }}
 
   publish:
@@ -78,7 +77,6 @@ jobs:
       - name: Fetch
         uses: robinraju/release-downloader@c39a3b234af58f0cf85888573d361fb6fa281534 # v1.10
         with:
-          tag: ${{ needs.setup.outputs.tag }}
           fileName: "*.tgz"
           out-file-path: ./node/dist
 
