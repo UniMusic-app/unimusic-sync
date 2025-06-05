@@ -1,7 +1,7 @@
 {
   "name": "@unimusic/sync",
-  "version": "0.1.12",
-  "description": "tet",
+  "version": "0.1.13",
+  "description": "UniMusic Node Addon",
   "main": "./lib/index.cjs",
   "scripts": {
     "test": "tsc && cargo test",
