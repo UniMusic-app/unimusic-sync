@@ -1,7 +1,7 @@
 {
   "name": "@unimusic/darwin-x64",
   "description": "Prebuilt binary package for `@unimusic/sync` on `darwin-x64`.",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "os": [
     "darwin"
   ],
