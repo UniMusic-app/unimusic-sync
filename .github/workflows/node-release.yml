@@ -1,0 +1,90 @@
+name: Node Release
+
+on:
+  push:
+    tags: ["*"]
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      publish: ${{ steps.publish.outputs.publish }}
+      ref: ${{ github.ref || github.event.repository.default_branch }}
+      tag: ${{ github.ref_name }}
+    steps:
+      - id: publish
+        name: Validate Publish Event
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z $NPM_TOKEN ]]; then
+            echo "::error::Secret NPM_TOKEN is not defined for this GitHub repo."
+            echo "::error::To publish to npm, this action requires:"
+            echo "::error:: • an npm access token;"
+            echo "::error:: • with Read-Write access to this project's npm packages;"
+            echo "::error:: • stored as a repo secret named NPM_TOKEN."
+            echo "::error::See https://docs.npmjs.com/about-access-tokens for info about creating npm tokens."
+            echo "::error:: 💡 The simplest method is to create a Classic npm token of type Automation."
+            echo "::error:: 💡 For greater security, consider using a Granual access token."
+            echo "::error::See https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions for info about how to store GitHub repo secrets."
+            exit 1
+          fi
+          echo publish=true | tee -a $GITHUB_OUTPUT
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Neon Environment
+        uses: ./.github/actions/setup-neon
+        with:
+          use-rust: false
+
+  build:
+    name: Build
+    needs: [setup]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/node-build.yml
+    with:
+      ref: ${{ needs.setup.outputs.ref }}
+      tag: ${{ needs.setup.outputs.tag }}
+      github-release: ${{ !!needs.setup.outputs.publish }}
+
+  publish:
+    name: Publish
+    if: ${{ needs.setup.outputs.publish }}
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.setup.outputs.ref }}
+
+      - name: Setup Neon Environment
+        uses: ./.github/actions/setup-neon
+        with:
+          use-rust: false
+
+      - name: Fetch
+        uses: robinraju/release-downloader@c39a3b234af58f0cf85888573d361fb6fa281534 # v1.10
+        with:
+          tag: ${{ needs.setup.outputs.tag }}
+          fileName: "*.tgz"
+          out-file-path: ./node/dist
+
+      - name: Publish
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for p in ./node/dist/*.tgz ; do
+            npm publish --access public $p
+          done
+        working-directory: node

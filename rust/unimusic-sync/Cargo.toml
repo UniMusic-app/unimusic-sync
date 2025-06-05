@@ -29,8 +29,13 @@ iroh-blobs = { version = "^0.35.0" }
 iroh-docs = { version = "^0.35.0", features = ["rpc"] }
 iroh-gossip = { version = "^0.35.0" }
 
+anyhow = { version = "^1.0", optional = true }
 
-uniffi = { workspace = true, features = ["tokio"] }
+uniffi = { workspace = true, features = ["tokio"], optional = true }
 
 [build-dependencies]
 uniffi = { workspace = true, features = ["build"] }
+
+[features]
+default = ["dep:uniffi"]
+no_uniffi = ["dep:anyhow"]

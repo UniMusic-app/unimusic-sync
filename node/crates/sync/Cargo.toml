@@ -1,0 +1,19 @@
+[package]
+name = "sync"
+version = "0.1.10"
+description = "UniMusicSync for Node.js"
+edition = "2024"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tokio = "^1.45"
+anyhow = "^1.0"
+
+neon = { version = "^1.1", features = ["tokio"] }
+
+unimusic-sync = { path = "../../../rust/unimusic-sync", features = [
+    "no_uniffi",
+], default-features = false }

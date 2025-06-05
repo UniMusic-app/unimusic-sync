@@ -1,20 +1,15 @@
-mod errors;
+pub mod errors;
 use errors::{Result, SharedError};
 
-mod types;
+pub mod types;
 use types::{UAuthorId, UDocTicket, UEntry, UHash, UNamespaceId, UNodeId};
 
-mod node_storage;
+pub mod node_storage;
 use node_storage::NodeStorage;
 
 use log::{info, warn};
 
-use std::{
-    borrow::Cow,
-    fmt::Debug,
-    path::PathBuf,
-    sync::{Arc, LazyLock},
-};
+use std::{borrow::Cow, fmt::Debug, path::PathBuf, sync::Arc};
 
 use iroh::{Endpoint, NodeAddr, node_info::NodeData, protocol::Router};
 use iroh_blobs::{
@@ -31,30 +26,36 @@ use iroh_docs::{
 };
 use iroh_gossip::{ALPN as GOSSIP_ALPN, net::Gossip};
 
-use tokio::{runtime::Runtime, sync::RwLock};
+use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
 
+#[cfg(feature = "default")]
+use {std::sync::LazyLock, tokio::runtime::Runtime};
+
+#[cfg(feature = "default")]
 uniffi::setup_scaffolding!();
 
+#[cfg(feature = "default")]
 pub static TOKIO_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     builder.enable_all();
-    let rt = builder.build().unwrap();
-    rt.block_on(uniffi::deps::async_compat::Compat::new(async {}));
-    rt
+    let runtime = builder.build().unwrap();
+    runtime.block_on(uniffi::deps::async_compat::Compat::new(async {}));
+    runtime
 });
 
-#[derive(uniffi::Object)]
+#[cfg_attr(feature = "default", derive(uniffi::Object))]
+#[derive(Debug)]
 pub struct IrohFactory;
 
-#[uniffi::export(async_runtime = "tokio")]
+#[cfg_attr(feature = "default", uniffi::export(async_runtime = "tokio"))]
 impl IrohFactory {
-    #[uniffi::constructor]
+    #[cfg_attr(feature = "default", uniffi::constructor)]
     pub fn new() -> Self {
         Self {}
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn iroh_manager(&self, path: &str) -> Result<IrohManager> {
         let path = PathBuf::from(path);
 
@@ -122,7 +123,8 @@ type PersistentStore = iroh_blobs::store::fs::Store;
 
 const TOMBSTONE: &[u8] = b"\00";
 
-#[derive(Debug, uniffi::Object)]
+#[cfg_attr(feature = "default", derive(uniffi::Object))]
+#[derive(Debug)]
 pub struct IrohManager {
     pub path: PathBuf,
     pub router: Router,
@@ -133,10 +135,10 @@ pub struct IrohManager {
     pub docs: Docs<PersistentStore>,
 }
 
-#[uniffi::export(async_runtime = "tokio")]
+#[cfg_attr(feature = "default", uniffi::export(async_runtime = "tokio"))]
 impl IrohManager {
     // TODO: Add channel/lock which notifies storage to stop locking so shutdown doesn't get starved
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn shutdown(&self) -> Result<()> {
         let node_storage = self.node_storage.read().await;
         let (shutdown, save) = tokio::join!(
@@ -167,7 +169,7 @@ impl IrohManager {
         }
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn get_known_nodes(&self) -> Vec<UNodeId> {
         self.node_storage
             .read()
@@ -178,7 +180,7 @@ impl IrohManager {
             .collect()
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn get_author(&self) -> Result<UAuthorId> {
         let docs_client = self.docs.client();
         let authors = docs_client.authors();
@@ -186,27 +188,27 @@ impl IrohManager {
         Ok(author.into())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn get_node_id(&self) -> UNodeId {
         let node_id = self.router.endpoint().node_id();
         node_id.into()
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn create_namespace(&self) -> Result<UNamespaceId> {
         let docs_client = self.docs.client();
         let doc = docs_client.create().await?;
         Ok(doc.id().into())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn delete_namespace(&self, namespace: UNamespaceId) -> Result<()> {
         let docs_client = self.docs.client();
         docs_client.drop_doc(namespace.into()).await?;
         Ok(())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn get_files(&self, namespace: UNamespaceId) -> Result<Vec<Arc<UEntry>>> {
         let docs_client = self.docs.client();
 
@@ -230,13 +232,13 @@ impl IrohManager {
         Ok(files)
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn delete_file(&self, namespace: UNamespaceId, path: String) -> Result<UHash> {
         let tombstone_hash = self.write_file(namespace, path, TOMBSTONE.to_vec()).await;
         return tombstone_hash;
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn write_file(
         &self,
         namespace: UNamespaceId,
@@ -258,7 +260,7 @@ impl IrohManager {
         Ok(hash.into())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn read_file(&self, namespace: UNamespaceId, path: &str) -> Result<Vec<u8>> {
         let docs_client = self.docs.client();
 
@@ -282,14 +284,14 @@ impl IrohManager {
         self.read_file_hash(content_hash.into()).await
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn read_file_hash(&self, hash: UHash) -> Result<Vec<u8>> {
         let blobs_client = self.blobs.client();
         let bytes = blobs_client.read_to_bytes(hash.into()).await?;
         Ok(bytes.to_vec())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn export(
         &self,
         namespace: UNamespaceId,
@@ -314,7 +316,7 @@ impl IrohManager {
         Ok(())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn export_hash(&self, hash: UHash, destination: &str) -> Result<()> {
         let blobs_client = self.blobs.client();
         blobs_client
@@ -329,7 +331,7 @@ impl IrohManager {
         Ok(())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn share(&self, namespace: UNamespaceId) -> Result<UDocTicket> {
         let docs_client = self.docs.client();
         let replica = docs_client
@@ -344,7 +346,7 @@ impl IrohManager {
         Ok(ticket.into())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn sync(&self, namespace: UNamespaceId) -> Result<()> {
         let docs_client = self.docs.client();
         let replica = docs_client
@@ -413,7 +415,7 @@ impl IrohManager {
         Ok(())
     }
 
-    #[uniffi::method(async_runtime = "tokio")]
+    #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn import(&self, ticket: UDocTicket) -> Result<UNamespaceId> {
         let ticket: DocTicket = ticket.into();
 

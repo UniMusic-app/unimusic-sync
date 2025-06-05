@@ -1,9 +1,11 @@
 use crate::types::UNamespaceId;
+#[cfg(feature = "default")]
 use uniffi::deps::anyhow;
 
 pub type Result<T> = std::result::Result<T, SharedError>;
 
-#[derive(Debug, thiserror::Error, uniffi::Error, PartialEq, Eq)]
+#[cfg_attr(feature = "default", derive(uniffi::Error))]
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum SharedError {
     #[error("Iroh error: {0}")]
     Iroh(String),
