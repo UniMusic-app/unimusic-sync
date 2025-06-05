@@ -27,8 +27,22 @@ macro_rules! uniffiable_wrapper {
             }
         }
 
+        impl FromStr for $out {
+            type Err = <$in as FromStr>::Err;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self($in::from_str(s)?))
+            }
+        }
+
+        impl From<$out> for String {
+            fn from(value: $out) -> Self {
+                value.0.to_string()
+            }
+        }
+
+        #[cfg(feature = "default")]
         uniffi::custom_type!($out, String, {
-            lower: |author_id| author_id.to_string(),
+            lower: |item| item.to_string(),
             try_lift: |string| Ok($out($in::from_str(&string)?))
         });
     };
@@ -75,7 +89,8 @@ uniffiable_wrapper!(Hash, UHash);
 pub struct UDocTicket(DocTicket);
 uniffiable_wrapper!(DocTicket, UDocTicket);
 
-#[derive(Debug, uniffi::Object)]
+#[cfg_attr(feature = "default", derive(uniffi::Object))]
+#[derive(Debug)]
 pub struct UEntry(Entry);
 
 impl From<Entry> for UEntry {
@@ -84,7 +99,7 @@ impl From<Entry> for UEntry {
     }
 }
 
-#[uniffi::export]
+#[cfg_attr(feature = "default", uniffi::export)]
 impl UEntry {
     pub fn key(&self) -> String {
         let key = self.0.key();

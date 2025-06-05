@@ -1,0 +1,3 @@
+[build.env]
+# Add unimusic volume, so local dependency can be properly resolved in the docker
+volumes = ["UNIMUSIC_VOL=../rust"]

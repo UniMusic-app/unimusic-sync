@@ -1,0 +1,32 @@
+{
+  "name": "@unimusic/linux-x64-gnu",
+  "description": "Prebuilt binary package for `@unimusic/sync` on `linux-x64-gnu`.",
+  "version": "0.1.10",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "index.node",
+  "files": [
+    "index.node"
+  ],
+  "neon": {
+    "type": "binary",
+    "rust": "x86_64-unknown-linux-gnu",
+    "node": "linux-x64-gnu",
+    "os": "linux",
+    "arch": "x64",
+    "abi": "gnu"
+  },
+  "author": "Im-Beast",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UniMusic-app/unimusic-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UniMusic-app/unimusic-sync/issues"
+  },
+  "homepage": "https://github.com/UniMusic-app/unimusic-sync#readme"
+}

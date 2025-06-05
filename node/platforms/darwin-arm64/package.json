@@ -1,0 +1,32 @@
+{
+  "name": "@unimusic/darwin-arm64",
+  "description": "Prebuilt binary package for `@unimusic/sync` on `darwin-arm64`.",
+  "version": "0.1.10",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "index.node",
+  "files": [
+    "index.node"
+  ],
+  "neon": {
+    "type": "binary",
+    "rust": "aarch64-apple-darwin",
+    "node": "darwin-arm64",
+    "os": "darwin",
+    "arch": "arm64",
+    "abi": null
+  },
+  "author": "Im-Beast",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UniMusic-app/unimusic-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UniMusic-app/unimusic-sync/issues"
+  },
+  "homepage": "https://github.com/UniMusic-app/unimusic-sync#readme"
+}
