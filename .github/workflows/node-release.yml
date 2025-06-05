@@ -1,8 +1,11 @@
 name: Node Release
 
 on:
-  push:
-    tags: ["*"]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["iOS Release"]
+    types:
+      - completed
 
 jobs:
   setup:
@@ -84,7 +87,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          for p in ./node/dist/*.tgz ; do
+          for p in ./dist/*.tgz ; do
             npm publish --access public $p
           done
         working-directory: node
