@@ -74,9 +74,18 @@ jobs:
         with:
           use-rust: false
 
+      - name: Get latest release tag
+        id: get-tag
+        run: |
+          LATEST_TAG=$(awk -F'"' '/let releaseTag = / {print $2}' Package.swift)
+          echo "Latest tag: $LATEST_TAG"
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Fetch
         uses: robinraju/release-downloader@c39a3b234af58f0cf85888573d361fb6fa281534 # v1.10
         with:
+          tag: ${{ steps.get-tag.outputs.tag }}
           fileName: "*.tgz"
           out-file-path: ./node/dist
 
