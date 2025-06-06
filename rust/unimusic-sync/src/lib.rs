@@ -26,7 +26,7 @@ use iroh_docs::{
 };
 use iroh_gossip::{ALPN as GOSSIP_ALPN, net::Gossip};
 
-use tokio::sync::RwLock;
+use tokio::{fs, sync::RwLock};
 use tokio_stream::StreamExt;
 
 #[cfg(feature = "default")]
@@ -319,15 +319,22 @@ impl IrohManager {
     #[cfg_attr(feature = "default", uniffi::method(async_runtime = "tokio"))]
     pub async fn export_hash(&self, hash: UHash, destination: &str) -> Result<()> {
         let blobs_client = self.blobs.client();
+
+        let destination = PathBuf::from(destination);
+        if destination.exists() {
+            fs::remove_file(&destination).await?;
+        }
+
         blobs_client
             .export(
                 hash.into(),
-                PathBuf::from(destination),
+                destination,
                 ExportFormat::Blob,
                 ExportMode::Copy,
             )
             .await?
             .await?;
+
         Ok(())
     }
 
