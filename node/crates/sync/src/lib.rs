@@ -178,7 +178,7 @@ async fn export_file(namespace: String, sync_path: String, destination_path: Str
 }
 
 #[neon::export]
-async fn export_hash(file_hash: String, destination_path: String) -> Result<()> {
+async fn export_file_hash(file_hash: String, destination_path: String) -> Result<()> {
     let unimusic = UNIMUSIC
         .get()
         .ok_or_else(|| anyhow!("UniMusicSync is not initialized!"))?;
@@ -202,7 +202,7 @@ async fn share(namespace: String) -> Result<String> {
 }
 
 #[neon::export]
-async fn import_file(ticket: String) -> Result<String> {
+async fn import_ticket(ticket: String) -> Result<String> {
     let unimusic = UNIMUSIC
         .get()
         .ok_or_else(|| anyhow!("UniMusicSync is not initialized!"))?;

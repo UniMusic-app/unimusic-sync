@@ -42,7 +42,7 @@ declare module "./load.cjs" {
   ): Promise<void>;
   function exportFileHash(hash: string, destinationPath: string): Promise<void>;
   function share(namespace: NamespaceId): Promise<DocTicket>;
-  function importFile(ticket: DocTicket): Promise<NamespaceId>;
+  function importTicket(ticket: DocTicket): Promise<NamespaceId>;
   function sync(namespace: NamespaceId): Promise<void>;
   function reconnect(): Promise<void>;
 }
