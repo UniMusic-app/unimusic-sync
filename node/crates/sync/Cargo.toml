@@ -1,6 +1,6 @@
 [package]
 name = "sync"
-version = "0.1.13"
+version = "0.1.14"
 description = "UniMusicSync for Node.js"
 edition = "2024"
 exclude = ["index.node"]

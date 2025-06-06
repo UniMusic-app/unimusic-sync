@@ -14,7 +14,7 @@ if useLocalFramework {
         path: "./rust/target/ios/libunimusic_sync-rs.xcframework"
     )
 } else {
-    let releaseTag = "0.1.13"
+    let releaseTag = "0.1.14"
     let releaseChecksum = "c5ec9f52fbc9010f336b26aa494344234e2e8ef8baff01bd5c49446a58550db1"
     binaryTarget = .binaryTarget(
         name: "UniMusicSyncCoreRS",
