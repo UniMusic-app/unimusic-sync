@@ -10,7 +10,7 @@ plugins {
 android {
     namespace 'app.unimusic.sync'
     compileSdk 35
-    ndkVersion "26.2.11394342"
+    ndkVersion "28.2.13676358"
 
     defaultConfig {
         minSdk 29
